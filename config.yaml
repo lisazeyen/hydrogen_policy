@@ -42,7 +42,7 @@ ci:
 # regional coverage of the model: "regions" or "EU"
 # "regions" -> strips the model to country where CI load is located + all neighboring countries
 # "EU" -> keeps the whole European power system (full ENTSO-E area)
-area: "regions"
+area: "test" #"regions"
 
 ###################
 # Fixed settings

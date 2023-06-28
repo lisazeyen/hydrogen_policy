@@ -70,6 +70,8 @@ def geoscope(n, zone, area):
 
     if area == 'EU':
         d['basenodes_to_keep'] = n.buses[n.buses.carrier=="AC"].index
+    elif area == "test":
+        d['basenodes_to_keep'] = d['country_nodes'] 
     else:
         d['basenodes_to_keep'] = get_neighbours(zone)
 
