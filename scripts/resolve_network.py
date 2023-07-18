@@ -165,7 +165,7 @@ def add_H2(n, snakemake):
 def add_dummies(n):
     elec_buses = n.buses.index[n.buses.carrier == "AC"]
 
-    logger.info("adding dummies to",elec_buses)
+    logger.info(f"adding dummies to {elec_buses}")
     n.madd("Generator",
             elec_buses + " dummy",
             bus=elec_buses,
@@ -210,7 +210,7 @@ def monthly_constraints(n, snakemake):
 
     res_gens = [name + " " + g for g in ci['res_techs']]
     weights = n.snapshot_weightings["generators"]
-
+    
     res = (n.model['Generator-p'].loc[:,res_gens] * weights).sum("Generator")
     res = res.groupby("snapshot.month").sum()
 
@@ -218,8 +218,8 @@ def monthly_constraints(n, snakemake):
     electrolysis = (n.model['Link-p'].loc[:,f"{name} H2 Electrolysis"] * weights)
     # allowed_excess = float(policy.replace("monthly","").replace("p","."))
     allowed_excess = 1
-    load = electrolysis.groupby("snapshot.month").sum() * -allowed_excess
-    lhs = res + load
+    load = electrolysis.groupby("snapshot.month").sum()
+    lhs = res - load
 
     n.model.add_constraints(lhs == 0, name="RES_monthly_matching")
 
