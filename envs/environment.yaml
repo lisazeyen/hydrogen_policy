@@ -1,11 +1,27 @@
 name: hourly
 channels:
-  - conda-forge
   - bioconda
+  - conda-forge
+  - defaults
+  - gurobi
 dependencies:
-  - python>=3.8
-  - pypsa>=0.21.3
+  - python
   - matplotlib
   - numpy
   - pandas
+  - pypsa
   - yaml
+  - ca-certificates
+  - certifi
+  - openssl
+  - pypdf2=1.28.4
+  - pip
+  - linopy
+  - geopandas
+  - seaborn
+  - oyaml
+  - snakemake
+  - ipykernel
+  - gurobi
+  - pip:
+    - vresutils
