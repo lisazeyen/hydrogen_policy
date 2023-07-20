@@ -90,6 +90,7 @@ rule summarise_offtake:
         csvs_h2_gen_mix=RDIR + "/csvs/{year}/{zone}/{palette}/{policy}_{res_share}_{offtake_volume}volume_{storage}_h2_gen_mix.csv",
         csvs_attr_emissions=RDIR + "/csvs/{year}/{zone}/{palette}/{policy}_{res_share}_{offtake_volume}volume_{storage}_attr_emissions.csv",
         csvs_price_duration=RDIR + "/csvs/{year}/{zone}/{palette}/{policy}_{res_share}_{offtake_volume}volume_{storage}_price_duration.csv",
+        csvs_co2_price=RDIR + "/csvs/{year}/{zone}/{palette}/{policy}_{res_share}_{offtake_volume}volume_{storage}_co2_price.csv",
     threads: 2
     resources: mem=2000
     script: "scripts/summarise_offtake.py"

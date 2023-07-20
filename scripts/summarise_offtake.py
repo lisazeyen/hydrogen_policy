@@ -15,13 +15,13 @@ if __name__ == "__main__":
     # Detect running outside of snakemake and mock snakemake for testing
     if 'snakemake' not in globals():
         import os
-        os.chdir("/home/lisa/Documents/hourly_vs_annually/scripts")
+        os.chdir("/home/lisa/mnt/hydrogen_policy/scripts")
         from _helpers import mock_snakemake
         snakemake = mock_snakemake('summarise_offtake', palette='p1',
                                    zone='DE', year='2025',
                                    policy="offgrid", storage="nostore",
                                    offtake_volume=3200, res_share="p0")
-        os.chdir("/home/lisa/Documents/hourly_vs_annually/")
+        os.chdir("/home/lisa/mnt/hydrogen_policy//")
 
 LHV_H2 = 33.33 # lower heating value [kWh/kg_H2]
 
@@ -600,6 +600,8 @@ nodal_supply_energy = pd.DataFrame()
 h2_gen_mix = pd.DataFrame()
 attr_emissions = pd.DataFrame()
 price_duration = pd.DataFrame()
+co2_price_df = pd.DataFrame()
+
 name = snakemake.config["ci"]["name"]
 
 # network
@@ -653,6 +655,14 @@ co2_emission = n.stores_t.e["co2 atmosphere"].iloc[-1]
 co2_emission = pd.DataFrame([co2_emission], index=cols)
 emissions = pd.concat([emissions, co2_emission])
 
+# co2 price
+try:
+    co2_price = n.global_constraints.loc["CO2Limit", "mu"]
+    co2_price = pd.DataFrame([co2_price], index=cols)
+    co2_price_df = pd.concat([co2_price_df, co2_price])
+except:
+    print("no co2 price")
+
 # supply energy
 supply_energy = calculate_supply_energy(n, cols, supply_energy)
 # nodal supply energy
@@ -700,3 +710,4 @@ h2_gen_mix.to_csv(snakemake.output.csvs_h2_gen_mix)
 attr_emissions.to_csv(snakemake.output.csvs_attr_emissions)
 price_duration.to_csv(snakemake.output.csvs_price_duration)
 emissions.to_csv(snakemake.output.csvs_emissions)
+emissions.to_csv(snakemake.output.csvs_co2_price)
