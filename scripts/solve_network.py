@@ -257,9 +257,9 @@ def set_co2_policy(n, snakemake, costs):
     year = snakemake.wildcards.year
 
     if gl_policy['policy_type'] == "co2 cap":
-        co2_cap = gl_policy['co2_share']*gl_policy['co2_baseline']
+        co2_cap = gl_policy['co2_share']*float(gl_policy['co2_baseline'])
         logger.info(f"Setting global CO2 cap to {co2_cap}")
-        n.global_constraints.at["CO2Limit","constant"] = float(co2_cap)
+        n.global_constraints.at["CO2Limit","constant"] = co2_cap
 
     elif gl_policy['policy_type'] == "co2 price":
         n.global_constraints.drop("CO2Limit", inplace=True)
