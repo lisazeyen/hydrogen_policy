@@ -77,6 +77,8 @@ def solve_network(n, tech_palette):
            solver_options=solver_options,
            log_fn=snakemake.log.solver,
            linearized_unit_commitment=linearized_uc)
+    
+    return n
 
     # n.lopf(pyomo=False,
     #        extra_functionality=extra_functionality,
@@ -158,7 +160,9 @@ if __name__ == "__main__":
 
     with memory_logger(filename=getattr(snakemake.log, 'memory', None), interval=30.) as mem:
 
-        solve_network(n, tech_palette)
+        n = solve_network(n, tech_palette)
+        
+        n.global_constraints.loc["CO2Limit", "mu"] = n.model.dual["GlobalConstraint-CO2Limit"].to_pandas()
 
         n.export_to_netcdf(snakemake.output.network)
 
