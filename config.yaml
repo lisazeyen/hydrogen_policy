@@ -28,9 +28,9 @@ scenario:
   year: ['2025'] # controls both the brownfield fleet and tech costs projection
   res_share: [p0] #, p01, p10, p20, p30, p35, p40, p45, p50, p55, p60, p70, p80, p90, 1p0]  # [EUR/kg_H2] fixed offtake price of H2
   offtake_volume: [3200] # [2233,3200, 6700]  # [MWh_H2 per h] fixed offtake volume per hour, 10 GB planned in DE by 2030 if run 100% 10GB*0.67=6700MWh/h
-  storage: ["flexibledemand", "nostore"] # "underground", "mtank", "htank", "nostore"]  # storage type at google node
+  storage: ["flexibledemand",  "nostore"] # "underground", "mtank", "htank", "nostore"]  # storage type at google node
   h2_demand_added: False
-  temporal_resolution: "73sn"
+  temporal_resolution: "146sn"
 
 
 solving_option: "together"   # options ["twostep", "together"]
@@ -71,7 +71,7 @@ global:
   uc: False  # unit commitment for conventional plants
   policy_type: "co2 cap" # one of ["co2 cap", "co2 price"]
   co2_baseline: 2.2694e8  # MtCO2/a - based on previous results with co2 price
-  co2_share: 1 #pu  - rough target for 2030
+  co2_share: 0.3 #pu  - rough target for 2030
   limit_res_exp_2025: 2 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology
   limit_res_exp_2030: 4 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology
   co2_price_2025: 80 # EUR/tCO2
