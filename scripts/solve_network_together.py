@@ -12,7 +12,6 @@ from resolve_network import (add_H2, add_dummies, res_constraints,
 
 import logging
 logger = logging.getLogger(__name__)
-import sys
 
 # Suppress logging of the slack bus choices
 pypsa.pf.logger.setLevel(logging.WARNING)
@@ -47,12 +46,6 @@ def solve_network(n, tech_palette):
         n.links.loc[coal_i, "p_min_pu"] = 0.9
     n.consistency_check()
 
-    # drop snapshots because of load shedding
-    # to_drop = pd.Timestamp('2013-01-16 15:00:00')
-    # new_snapshots = n.snapshots.drop(to_drop)
-    # n.set_snapshots(new_snapshots)
-    # final_sn = n.snapshots[n.snapshots<to_drop][-1]
-    # n.snapshot_weightings.loc[final_sn] *= 2
 
     formulation = snakemake.config['solving']['options']['formulation']
     solver_options = snakemake.config['solving']['solver']
@@ -63,7 +56,6 @@ def solve_network(n, tech_palette):
          add_unit_committment(n)
          
     linearized_uc = True if any(n.links.committable) else False
-
 
     
     # testing
@@ -80,12 +72,6 @@ def solve_network(n, tech_palette):
     
     return n
 
-    # n.lopf(pyomo=False,
-    #        extra_functionality=extra_functionality,
-    #        formulation=formulation,
-    #        solver_name=solver_name,
-    #        solver_options=solver_options,
-    #        solver_logfile=snakemake.log.solver)
 
 #%%
 if __name__ == "__main__":
@@ -93,11 +79,11 @@ if __name__ == "__main__":
     if 'snakemake' not in globals():
         from _helpers import mock_snakemake
         snakemake = mock_snakemake('solve_network_together',
-                                policy="exl1p0", palette='p1',
+                                policy="offgrid", palette='p1',
                                 zone='DE', year='2025',
                                 res_share="p0",
                                 offtake_volume="3200",
-                                storage="mtank")
+                                storage="flexibledemand")
 
     logging.basicConfig(filename=snakemake.log.python,
                     level=snakemake.config['logging_level'])
@@ -162,8 +148,6 @@ if __name__ == "__main__":
 
         n = solve_network(n, tech_palette)
         
-        n.global_constraints.loc["CO2Limit", "mu"] = n.model.dual["GlobalConstraint-CO2Limit"].to_pandas()
-
         n.export_to_netcdf(snakemake.output.network)
 
     logger.info("Maximum memory usage: {}".format(mem.mem_usage))
