@@ -9,7 +9,7 @@ dependencies:
   - matplotlib
   - numpy
   - pandas
-  - pypsa
+  - pypsa>=0.25.1
   - yaml
   - ca-certificates
   - certifi
