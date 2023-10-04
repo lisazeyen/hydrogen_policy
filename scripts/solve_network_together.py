@@ -1,5 +1,6 @@
 
 import pypsa, pandas as pd
+import numpy as np
 from solve_network import (prepare_costs, palette, strip_network,
                            timescope, shutdown_lineexp, add_battery_constraints,
                            limit_resexp,set_co2_policy,
@@ -61,17 +62,86 @@ def solve_network(n, tech_palette):
     # testing
     nhours = snakemake.config["scenario"]["temporal_resolution"]
     n = average_every_nhours(n, nhours)
-
-    n.optimize(
+        
+    result, message = n.optimize(
            extra_functionality=extra_functionality,
            formulation=formulation,
            solver_name=solver_name,
            solver_options=solver_options,
            log_fn=snakemake.log.solver,
            linearized_unit_commitment=linearized_uc)
+   
+    if result != "ok" or message != "optimal":
+        logger.info(f"solver ended with {result} and {message}, break")
+        exit()
     
     return n
 
+
+def DE_targets(n, snakemake):
+    
+    """ Set capacities according to planned targets.
+    from Agora report [1]  p.10
+    [1] https://static.agora-energiewende.de/fileadmin/Projekte/2021/2021_11_DE_KNStrom2035/A-EW_264_KNStrom2035_WEB.pdf
+    
+    """  
+    capacities_2025 = {
+        "coal": 8e3,   # p.11 [1]
+        "lignite": 14e3, # p.11 [1]
+        "gas": 37e3,  # p.11 [1]
+        "solar":  108e3,    # p.22 [1]
+        "onwind": 77e3,  # p.22 [1]
+        "offwind-dc": 12e3,  # p.22 [1]
+        }
+    
+    capacities_2030 = {
+        "coal": 0,   # p.11 [1]
+        "lignite": 0, # p.11 [1]
+        "gas": 46e3,  # p.11 [1]
+        "solar":  215e3,    # p.22 [1]
+        "onwind": 115e3,  # p.22 [1]
+        "offwind-dc": 30e3 ,  # p.22 [1]
+        }
+    
+    year = snakemake.wildcards.year    
+    
+    # scale electricity demand
+    current_load = (n.loads_t.p_set
+                    .mul(n.snapshot_weightings.generators, axis=0)["DE1 0"]
+                    .sum())/1e6
+    load_scale = {"2025":590/current_load,
+                  "2030":(726-37)/current_load}
+    logger.info("Increasing electricity demand by factor %.2f",
+                round(load_scale[year], ndigits=2))
+    n.loads_t.p_set["DE1 0"] *= load_scale[year]
+    
+    # scale wind
+    existing_wind = n.generators[(n.generators.index.str[:2]=="DE")
+                                 &(n.generators.carrier=="offwind")].p_nom.sum()
+    capacities = capacities_2025 if year=="2025" else capacities_2030  
+    capacities["offwind-dc"] -= existing_wind
+    
+    # conventional
+    for carrier in ["lignite", "coal"]:
+        links_i = n.links[(n.links.carrier==carrier)&(n.links.index.str[:2]=="DE")].index
+        scale_factor = capacities[carrier] / n.links.p_nom.mul(n.links.efficiency).loc[links_i].sum()
+        scale_factor = 0 if np.isnan(scale_factor) else scale_factor
+        n.links.loc[links_i, "p_nom"] *= scale_factor
+        n.links.loc[links_i, "p_nom_extendable"] = False 
+        logger.info(f"Scaling capacity of {carrier} by {scale_factor}")
+     
+    # renewable
+    c = "Generator"
+    for carrier in ["offwind-dc", "solar", "onwind"]:
+        gens_i = n.df(c)[(n.df(c).carrier==carrier)&(n.df(c).index.str[:2]=="DE")].index
+        if carrier=="offwind-dc":
+            n.df(c).loc[gens_i, "p_nom"] = capacities[carrier] 
+        else:
+            scale_factor = capacities[carrier] / n.df(c).p_nom.loc[gens_i].sum()
+            n.df(c).loc[gens_i, "p_nom"] *= scale_factor
+            print(f"Scaling capacity of {carrier} by {scale_factor}")
+        
+    return n
 
 #%%
 if __name__ == "__main__":
@@ -79,7 +149,7 @@ if __name__ == "__main__":
     if 'snakemake' not in globals():
         from _helpers import mock_snakemake
         snakemake = mock_snakemake('solve_network_together',
-                                policy="offgrid", palette='p1',
+                                policy="res1p0", palette='p1',
                                 zone='DE', year='2025',
                                 res_share="p0",
                                 offtake_volume="3200",
@@ -148,10 +218,13 @@ if __name__ == "__main__":
     reduce_biomass_potential(n)
     cost_parametrization(n, snakemake)
     set_co2_policy(n, snakemake, costs)
+    
+    if snakemake.config["scenario"]["DE_target"] and "DE" in n.buses.country.unique():
+        n = DE_targets(n, snakemake)
 
     add_H2(n, snakemake)
     add_dummies(n)
-
+    
     with memory_logger(filename=getattr(snakemake.log, 'memory', None), interval=30.) as mem:
 
         n = solve_network(n, tech_palette)

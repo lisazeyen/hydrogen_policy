@@ -12,7 +12,7 @@ n_2030: 'input/elec_s_37_lv1.0__1H-B-solar+p3_2030.nc'
 ###################
 # Scenario controls
 
-run: 'test_new_input'
+run: 'add_DE_targets'
 
 #wildcards
 scenario:
@@ -30,7 +30,8 @@ scenario:
   offtake_volume: [3200] # [3200, 6050]  # [MWh_H2 per h] fixed offtake volume per hour, updated German hydrogen strategy, local production between 28-53 TWh_H2 per year in 2030, 10 GB planned in DE by 2030 if run 100% 10GB*0.67=6700MWh/h
   storage: ["flexibledemand", "nostore"] # ["flexibledemand", "underground", "mtank", "htank", "nostore"]  # storage type at hydrogen production
   h2_demand_added: False
-  temporal_resolution: "8760H"
+  temporal_resolution: "1H"
+  DE_target: True
 
 
 solving_option: "together"   # options ["twostep", "together"]
