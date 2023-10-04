@@ -121,6 +121,15 @@ if __name__ == "__main__":
     n.links.loc[chp_i, "bus2"] = ""
     remove_i = n.links[n.links.carrier.str.contains("biomass boiler")].index
     n.mremove("Link", remove_i)
+    
+    # adjust hydrogen storage in background system to medium pressure
+    store_i = n.stores[n.stores.carrier=="H2 Store"].index
+    store_cost = snakemake.config["global"]["H2_store_cost"]["mtank"][float(year)]
+    logger.info(
+    "Setting hydrogen storage costs in the background system"
+    " to medium pressure steel tanks in all countries."
+    )
+    n.stores.loc[store_i, "capital_cost"] = store_cost 
 
 
     Nyears = 1 # years in simulation
@@ -142,7 +151,6 @@ if __name__ == "__main__":
 
     add_H2(n, snakemake)
     add_dummies(n)
-
 
     with memory_logger(filename=getattr(snakemake.log, 'memory', None), interval=30.) as mem:
 
