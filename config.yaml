@@ -30,6 +30,7 @@ scenario:
   year: ['2030'] # controls both the brownfield fleet and tech costs projection
   # all options: ['2025', '2030']
   res_share: [p0] #p0 is base assumption, others give the share, e.g. p10 would be 10% RES share
+  offtake_volume: [4000]  # full load hours to get from GW_el targets to MWh_H2 offtake per hour
   storage: ["underground"] # ["flexibledemand", "underground", "mtank", "htank", "nostore"]  # storage type at hydrogen production
   h2_demand_added: False
   temporal_resolution: "25H"

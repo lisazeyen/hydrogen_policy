@@ -20,14 +20,13 @@ from solve_network import geoscope, freeze_capacities, add_battery_constraints
 
 def add_H2(n, snakemake):
 
-    name = snakemake.config['ci']['name']
+    area = snakemake.config['area']
     year = snakemake.wildcards.year
+    policy = snakemake.wildcards.policy
     country_targets = snakemake.config[f"h2_target_{year}"]
     
-    area = snakemake.config['area']
-    policy = snakemake.wildcards.policy
-    
     for country, target in country_targets.items():
+        
         node = geoscope(n, country, area)['node']
     
         # remove electricity demand of electrolysis
@@ -36,140 +35,152 @@ def add_H2(n, snakemake):
             n.mremove("Load", load_i)
         if policy == "ref":
             continue
+        
+        add_H2_node(n, snakemake, node, target)
 
-        n.add("Bus",
-            f"{node} {name}"
-        )
 
-        n.add("Bus",
-            f"{node} {name} H2",
-            carrier="H2"
-        )
+def add_H2_node(n, snakemake, node, target):
+    
+    year = snakemake.wildcards.year
+    policy = snakemake.wildcards.policy
+    ci_name = snakemake.config['ci']['name']
+    flh = snakemake.wildcards.offtake_volume
+    
+    name = f"{ci_name} {node.split(' ')[0]}"
+    
+    n.add("Bus",
+        name
+    )
 
-        n.add("Link",
-            f"{country} {name} H2 Electrolysis",
-            bus0=f"{node} {name}",
-            bus1=f"{node} {name} H2",
-            carrier="H2 Electrolysis",
-            efficiency=n.links.at[f"{node} H2 Electrolysis"+"-{}".format(year), "efficiency"],
-            capital_cost=n.links.at[f"{node} H2 Electrolysis"+"-{}".format(year), "capital_cost"],
-            p_nom_extendable=True,
-            lifetime=n.links.at[f"{node} H2 Electrolysis"+"-{}".format(year), "lifetime"]
-        )
+    n.add("Bus",
+        f"{name} H2",
+        carrier="H2"
+    )
 
-        # add offtake
-        # LHV_H2 = 33.33 # lower heating value [kWh/kg_H2]
-        # offtake_price = float(snakemake.wildcards.offtake_price) * LHV_H2
-        # target is in GW_el installed -> fixed offtake volume in MWh_H2 per h
-        efficiency = efficiency=n.links.at[f"{node} H2 Electrolysis"+"-{}".format(year), "efficiency"]
-        capacity_factor = 4000 / 8760
-        offtake_volume = target * efficiency * capacity_factor * 1000
+    n.add("Link",
+        f"{name} H2 Electrolysis",
+        bus0=name,
+        bus1=f"{name} H2",
+        carrier="H2 Electrolysis",
+        efficiency=n.links.at[f"{node} H2 Electrolysis"+"-{}".format(year), "efficiency"],
+        capital_cost=n.links.at[f"{node} H2 Electrolysis"+"-{}".format(year), "capital_cost"],
+        p_nom_extendable=True,
+        lifetime=n.links.at[f"{node} H2 Electrolysis"+"-{}".format(year), "lifetime"]
+    )
 
-        # logger.info("Add H2 offtake with offtake price {}".format(offtake_price))
-        # n.add("Generator",
-        #        f"{name} H2" + " offtake",
-        #        bus=f"{name} H2",
-        #        carrier="offtake H2",
-        #        marginal_cost=offtake_price,
-        #        p_nom=offtake_volume,
-        #        p_nom_extendable=False,
-        #        p_max_pu=0,
-        #        p_min_pu=-1)
+    # add offtake
+    # LHV_H2 = 33.33 # lower heating value [kWh/kg_H2]
+    # offtake_price = float(snakemake.wildcards.offtake_price) * LHV_H2
+    # target is in GW_el installed -> fixed offtake volume in MWh_H2 per h
+    efficiency = efficiency=n.links.at[f"{node} H2 Electrolysis"+"-{}".format(year), "efficiency"]
+    capacity_factor = float(flh) / 8760
+    offtake_volume = target * efficiency * capacity_factor * 1000
 
-        n.add("Load",
-            f"{node} {name} H2",
-            carrier=f"{node} {name} H2",
-            bus=f"{node} {name} H2",
-            p_set=float(offtake_volume),
-        )
+    # logger.info("Add H2 offtake with offtake price {}".format(offtake_price))
+    # n.add("Generator",
+    #        f"{name} H2" + " offtake",
+    #        bus=f"{name} H2",
+    #        carrier="offtake H2",
+    #        marginal_cost=offtake_price,
+    #        p_nom=offtake_volume,
+    #        p_nom_extendable=False,
+    #        p_max_pu=0,
+    #        p_min_pu=-1)
 
-        # storage cost depending on wildcard
-        store_type = snakemake.wildcards.storage
-        if store_type != "nostore":
-            store_cost = snakemake.config["global"]["H2_store_cost"][store_type][float(snakemake.wildcards.year)]
-            n.add("Store",
-            f"{node} {name} H2 Store",
-            bus=f"{node} {name} H2",
+    n.add("Load",
+        f"{name} H2",
+        carrier="H2",
+        bus=f"{name} H2",
+        p_set=float(offtake_volume),
+    )
+
+    # storage cost depending on wildcard
+    store_type = snakemake.wildcards.storage
+    if store_type != "nostore":
+        store_cost = snakemake.config["global"]["H2_store_cost"][store_type][float(snakemake.wildcards.year)]
+        n.add("Store",
+            f"{name} H2 Store",
+            bus=f"{name} H2",
             e_cyclic=True,
             e_nom_extendable=True,
             # e_nom=load*8760,
             carrier="H2 Store",
             capital_cost = store_cost,
-		)
+        )
 
-        if any([x in policy for x in ["res", "cfe", "exl", "monthly"]]):
-            n.add("Link",
-                f"{node} {name} export",
-                bus0=f"{node} {name}",
-                bus1=node,
-                carrier="export",
-                marginal_cost=0.1, #large enough to avoid optimization artifacts, small enough not to influence PPA portfolio
-                p_nom=1e6
-            )
+    if any([x in policy for x in ["res", "cfe", "exl", "monthly"]]):
+        n.add("Link",
+            f"{name} export",
+            bus0=name,
+            bus1=node,
+            carrier="export",
+            marginal_cost=0.1, #large enough to avoid optimization artifacts, small enough not to influence PPA portfolio
+            p_nom=1e6
+        )
 
-        if any([x in policy for x in ["res", "grd", "monthly"]]):
-            n.add("Link",
-                f"{node} {name} import",
-                carrier = "import",
-                bus0=node,
-                bus1=f"{node} {name}",
-                marginal_cost=0.001, #large enough to avoid optimization artifacts, small enough not to influence PPA portfolio
-                p_nom=1e6
-            )
+    if any([x in policy for x in ["res", "grd", "monthly"]]):
+        n.add("Link",
+            f"{name} import",
+            carrier = "import",
+            bus0=node,
+            bus1=name,
+            marginal_cost=0.001, #large enough to avoid optimization artifacts, small enough not to influence PPA portfolio
+            p_nom=1e6
+        )
 
-        if policy == "grd":
-            continue
+    if policy == "grd":
+        return None
 
-        #RES generator
-        for carrier in ["onwind","solar"]:
-            gen_template = node+" "+carrier+"-{}".format(year)
-            n.add("Generator",
-                f"{node} {name} {carrier}",
-                carrier=carrier,
-                bus=f"{node} {name}",
-                p_nom_extendable=True,
-                p_max_pu=n.generators_t.p_max_pu[gen_template],
-                capital_cost=n.generators.at[gen_template,"capital_cost"],
-                marginal_cost=n.generators.at[gen_template,"marginal_cost"]
-            )
+    #RES generator
+    for carrier in ["onwind","solar"]:
+        gen_template = node+" "+carrier+"-{}".format(year)
+        n.add("Generator",
+            f"{name} {carrier}",
+            carrier=carrier,
+            bus=name,
+            p_nom_extendable=True,
+            p_max_pu=n.generators_t.p_max_pu[gen_template],
+            capital_cost=n.generators.at[gen_template,"capital_cost"],
+            marginal_cost=n.generators.at[gen_template,"marginal_cost"]
+        )
 
-        if "battery" in ["battery"]:
-            n.add("Bus",
-                f"{node} {name} battery",
-                carrier="battery"
-            )
+    if "battery" in ["battery"]:
+        n.add("Bus",
+            f"{name} battery",
+            carrier="battery"
+        )
 
-            n.add("Store",
-                f"{node} {name} battery",
-                bus=f"{node} {name} battery",
-                e_cyclic=True,
-                e_nom_extendable=True,
-                carrier="battery",
-                capital_cost=n.stores.at[f"{node} battery"+"-{}".format(year), "capital_cost"],
-                lifetime=n.stores.at[f"{node} battery"+"-{}".format(year), "lifetime"]
-            )
+        n.add("Store",
+            f"{name} battery",
+            bus=f"{name} battery",
+            e_cyclic=True,
+            e_nom_extendable=True,
+            carrier="battery",
+            capital_cost=n.stores.at[f"{node} battery"+"-{}".format(year), "capital_cost"],
+            lifetime=n.stores.at[f"{node} battery"+"-{}".format(year), "lifetime"]
+        )
 
-            n.add("Link",
-                f"{node} {name} battery charger",
-                bus0=f"{node} {name}",
-                bus1=f"{node} {name} battery",
-                carrier="battery charger",
-                efficiency=n.links.at[f"{node} battery charger"+"-{}".format(year), "efficiency"],
-                capital_cost=n.links.at[f"{node} battery charger"+"-{}".format(year), "capital_cost"],
-                p_nom_extendable=True,
-                lifetime=n.links.at[f"{node} battery charger"+"-{}".format(year), "lifetime"]
-            )
+        n.add("Link",
+            f"{name} battery charger",
+            bus0=f"{name}",
+            bus1=f"{name} battery",
+            carrier="battery charger",
+            efficiency=n.links.at[f"{node} battery charger"+"-{}".format(year), "efficiency"],
+            capital_cost=n.links.at[f"{node} battery charger"+"-{}".format(year), "capital_cost"],
+            p_nom_extendable=True,
+            lifetime=n.links.at[f"{node} battery charger"+"-{}".format(year), "lifetime"]
+        )
 
-            n.add("Link",
-                f"{node} {name} battery discharger",
-                bus0=f"{node} {name} battery",
-                bus1=f"{node} {name}",
-                carrier="battery discharger",
-                efficiency=n.links.at[f"{node} battery discharger"+"-{}".format(year), "efficiency"],
-                marginal_cost=n.links.at[f"{node} battery discharger"+"-{}".format(year), "marginal_cost"],
-                p_nom_extendable=True,
-                lifetime=n.links.at[f"{node} battery discharger"+"-{}".format(year), "lifetime"]
-            )
+        n.add("Link",
+            f"{name} battery discharger",
+            bus0=f"{name} battery",
+            bus1=f"{name}",
+            carrier="battery discharger",
+            efficiency=n.links.at[f"{node} battery discharger"+"-{}".format(year), "efficiency"],
+            marginal_cost=n.links.at[f"{node} battery discharger"+"-{}".format(year), "marginal_cost"],
+            p_nom_extendable=True,
+            lifetime=n.links.at[f"{node} battery discharger"+"-{}".format(year), "lifetime"]
+        )
 
 def add_dummies(n):
     elec_buses = n.buses.index[n.buses.carrier == "AC"]
@@ -184,10 +195,24 @@ def add_dummies(n):
 
 
 def res_constraints(n, snakemake):
+
+    area = snakemake.config['area']
+    year = snakemake.wildcards.year
+    country_targets = snakemake.config[f"h2_target_{year}"]
+    
+    for country in country_targets.keys():
+        
+        node = geoscope(n, country, area)['node']
+    
+        res_constraints_node(n, snakemake, node)
+
+
+def res_constraints_node(n, snakemake, node):
     print("set res constraint")
 
     ci = snakemake.config['ci']
-    name = snakemake.config['ci']['name']
+    ci_name = ci['name']
+    name = f"{ci_name} {node.split(' ')[0]}"
     policy = snakemake.wildcards.policy
 
     weights = n.snapshot_weightings["generators"]
@@ -201,22 +226,35 @@ def res_constraints(n, snakemake):
 
     lhs = res - electrolysis
 
-    n.model.add_constraints(lhs >= 0, name="RES_annual_matching")
+    n.model.add_constraints(lhs >= 0, name=f"{name} RES_annual_matching")
 
 
     allowed_excess = float(policy.replace("res","").replace("p","."))
 
     lhs = res - (electrolysis*allowed_excess)
 
-    n.model.add_constraints(lhs <= 0, name="RES_annual_matching_excess")
+    n.model.add_constraints(lhs <= 0, name=f"{name} RES_annual_matching_excess")
 
 
 def monthly_constraints(n, snakemake):
 
+    area = snakemake.config['area']
+    year = snakemake.wildcards.year
+    country_targets = snakemake.config[f"h2_target_{year}"]
+    
+    for country in country_targets.keys():
+        
+        node = geoscope(n, country, area)['node']
+    
+        monthly_constraints_node(n, snakemake, node)
+
+
+def monthly_constraints_node(n, snakemake, node):
 
     ci = snakemake.config['ci']
-    name = ci['name']
-
+    ci_name = ci['name']    
+    name = f"{ci_name} {node.split(' ')[0]}"
+    
     res_gens = [name + " " + g for g in ci['res_techs']]
     weights = n.snapshot_weightings["generators"]
     
@@ -230,13 +268,27 @@ def monthly_constraints(n, snakemake):
     load = electrolysis.groupby("snapshot.month").sum()
     lhs = res - load
 
-    n.model.add_constraints(lhs == 0, name="RES_monthly_matching")
+    n.model.add_constraints(lhs == 0, name=f"{name} RES_monthly_matching")
 
 
 def excess_constraints(n, snakemake):
 
+    area = snakemake.config['area']
+    year = snakemake.wildcards.year
+    country_targets = snakemake.config[f"h2_target_{year}"]
+    
+    for country in country_targets.keys():
+        
+        node = geoscope(n, country, area)['node']
+    
+        excess_constraints_node(n, snakemake, node)
+
+
+def excess_constraints_node(n, snakemake, node):
+
     ci = snakemake.config['ci']
-    name = ci['name']
+    ci_name = ci['name']
+    name = f"{ci_name} {node.split(' ')[0]}"
     policy = snakemake.wildcards.policy
 
     res_gens = [name + " " + g for g in ci['res_techs']]
@@ -256,7 +308,7 @@ def excess_constraints(n, snakemake):
 
     lhs = res - electrolysis*allowed_excess
 
-    n.model.add_constraints(lhs <= 0, name="RES_hourly_excess")
+    n.model.add_constraints(lhs <= 0, name=f"{name} RES_hourly_excess")
 
 
 def solve(policy, n):
