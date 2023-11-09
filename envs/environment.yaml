@@ -19,6 +19,7 @@ dependencies:
   - linopy
   - geopandas
   - seaborn
+  - openpyxl
   - oyaml
   - snakemake
   - ipykernel
