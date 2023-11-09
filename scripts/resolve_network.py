@@ -182,6 +182,7 @@ def add_H2_node(n, snakemake, node, target):
             lifetime=n.links.at[f"{node} battery discharger"+"-{}".format(year), "lifetime"]
         )
 
+
 def add_dummies(n):
     elec_buses = n.buses.index[n.buses.carrier == "AC"]
 
@@ -226,14 +227,14 @@ def res_constraints_node(n, snakemake, node):
 
     lhs = res - electrolysis
 
-    n.model.add_constraints(lhs >= 0, name=f"{name} RES_annual_matching")
+    n.model.add_constraints(lhs >= 0, name=f"{node.split(' ')[0]}_RES_annual_matching")
 
 
     allowed_excess = float(policy.replace("res","").replace("p","."))
 
     lhs = res - (electrolysis*allowed_excess)
 
-    n.model.add_constraints(lhs <= 0, name=f"{name} RES_annual_matching_excess")
+    n.model.add_constraints(lhs <= 0, name=f"{node.split(' ')[0]}_RES_annual_matching_excess")
 
 
 def monthly_constraints(n, snakemake):
@@ -268,7 +269,7 @@ def monthly_constraints_node(n, snakemake, node):
     load = electrolysis.groupby("snapshot.month").sum()
     lhs = res - load
 
-    n.model.add_constraints(lhs == 0, name=f"{name} RES_monthly_matching")
+    n.model.add_constraints(lhs == 0, name=f"{node.split(' ')[0]}_RES_monthly_matching")
 
 
 def excess_constraints(n, snakemake):
@@ -308,7 +309,7 @@ def excess_constraints_node(n, snakemake, node):
 
     lhs = res - electrolysis*allowed_excess
 
-    n.model.add_constraints(lhs <= 0, name=f"{name} RES_hourly_excess")
+    n.model.add_constraints(lhs <= 0, name=f"{node.split(' ')[0]}_RES_hourly_excess")
 
 
 def solve(policy, n):

@@ -150,7 +150,7 @@ if __name__ == "__main__":
         from _helpers import mock_snakemake
         snakemake = mock_snakemake('solve_network_together',
                                 policy="res1p0", palette='p1',
-                                zone='DE', year='2025',
+                                zone='DE', year='2030',
                                 res_share="p0",
                                 offtake_volume="3200",
                                 storage="flexibledemand")
