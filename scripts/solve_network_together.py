@@ -143,6 +143,65 @@ def DE_targets(n, snakemake):
         
     return n
 
+
+def add_entsoe_demand(n):
+    """
+    Add demand forecast from ENTSO-E ERAA [1] 
+    GB is not in the ENTSO-E ERAA dataset, demand time series of GB is scaled
+    based on average increased electricity demand increase, this neglects
+    higher demand in winter times in 2030 due to electrified heating.
+    
+    [1] https://www.entsoe.eu/outlooks/eraa/2022/eraa-downloads/
+    """
+    weather_year = 2013
+    xls = pd.ExcelFile(snakemake.input.demand)
+    sheet_names = xls.sheet_names
+    countries = n.buses.country.unique()
+    
+    logger.info("Read in ENTSO-E ERAA demand data")
+    data_dict = {sheet_name: pd.read_excel(xls, sheet_name=sheet_name, header=[10],
+                                           index_col=[0,1])[weather_year] 
+             for sheet_name in sheet_names if sheet_name[:2] in countries}
+    
+    # ENTSO-E ERAA demand
+    demand = pd.concat(data_dict, axis=1)
+    # sum demand by country   
+    demand = demand.T.groupby(demand.columns.str[:2]).sum().T
+    demand.index = n.snapshots
+    
+    # get average scaling for GB (this neglects higher demand in winter)
+    load_grouped = n.loads_t.p_set.T.groupby(n.loads_t.p_set.columns.str[:2]).sum().T
+    average_scale = (demand.sum()/load_grouped.sum()).mean()
+    
+    logger.info("overwrite PyPSA demand with ENTSO-E ERAA data")
+    # create a new DataFrame with the same index as `demand` and columns as `n.loads_t.p_set`
+    weighted_demand = pd.DataFrame(index=demand.index, columns=n.loads_t.p_set.columns)
+    
+    # calculate the weights for countries with multiple regions
+    for col in n.loads_t.p_set.columns:
+        country_code = col[:2]
+        if country_code in demand.columns:
+            # find the columns in `n.loads_t.p_set` that correspond to the same country
+            related_cols = [c for c in n.loads_t.p_set.columns if c.startswith(country_code)]
+            # calculate the total load for the country at each time point
+            total_load = n.loads_t.p_set[related_cols].sum(axis=1)
+            for related_col in related_cols:
+                # assign weighted demand to the new DataFrame
+                weighted_demand[related_col] = (n.loads_t.p_set[related_col] / total_load) * demand[country_code]
+    # overwrite the `n.loads_t.p_set` values with the weighted demand
+    n.loads_t.p_set.update(weighted_demand)
+    
+    # missing countries 
+    missing = weighted_demand.columns[weighted_demand.isna().sum()!=0]
+    if len(missing)!=0:
+        logger.info(
+        f"the data for the following nodes is missing: {missing},\n"
+        f"scaling time-series with average scale factor of {average_scale}"
+        )
+        # scale missing countries with average scaling factor
+        n.loads_t.p_set[missing] *= average_scale
+
+
 #%%
 if __name__ == "__main__":
     # Detect running outside of snakemake and mock snakemake for testing
@@ -150,7 +209,7 @@ if __name__ == "__main__":
         from _helpers import mock_snakemake
         snakemake = mock_snakemake('solve_network_together',
                                 policy="res1p0", palette='p1',
-                                zone='DE', year='2025',
+                                zone='DE', year='2030',
                                 res_share="p0",
                                 offtake_volume="3200",
                                 storage="flexibledemand")
@@ -212,6 +271,7 @@ if __name__ == "__main__":
                           snakemake)
 
     strip_network(n, zone, area, snakemake)
+    add_entsoe_demand(n)
     shutdown_lineexp(n)
     limit_resexp(n,year, snakemake)
     phase_outs(n, snakemake)
