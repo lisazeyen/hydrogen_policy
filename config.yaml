@@ -30,7 +30,7 @@ scenario:
   offtake_volume: [3200] # [3200, 6050]  # [MWh_H2 per h] fixed offtake volume per hour, updated German hydrogen strategy, local production between 28-53 TWh_H2 per year in 2030, 10 GB planned in DE by 2030 if run 100% 10GB*0.67=6700MWh/h
   storage: ["underground"] # ["flexibledemand", "underground", "mtank", "htank", "nostore"]  # storage type at hydrogen production
   h2_demand_added: False
-  temporal_resolution: "1H"
+  temporal_resolution: "24H"
   DE_target: True
 
 
@@ -43,7 +43,7 @@ ci:
 # regional coverage of the model: "regions" or "EU"
 # "regions" -> strips the model to country where CI load is located + all neighboring countries
 # "EU" -> keeps the whole European power system (full ENTSO-E area)
-area: "test" #"regions"
+area: "regions" #"regions"
 
 ###################
 # Fixed settings
