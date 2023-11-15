@@ -251,7 +251,6 @@ def monthly_constraints(n, snakemake):
 
 def monthly_constraints_node(n, snakemake, node):
     
-    breakpoint()
 
     ci = snakemake.config['ci']
     ci_name = ci['name']    
@@ -264,7 +263,7 @@ def monthly_constraints_node(n, snakemake, node):
     res = res.groupby("snapshot.month").sum()
 
 
-    electrolysis = (n.model['Link-p'].loc[:,f"{name} H2 Electrolysis"] * weights)
+    electrolysis = (n.model['Link-p'].loc[:,[f"{name} H2 Electrolysis"]] * weights).sum("Link")
     # allowed_excess = float(policy.replace("monthly","").replace("p","."))
     allowed_excess = 1
     load = electrolysis.groupby("snapshot.month").sum()
@@ -296,10 +295,9 @@ def excess_constraints_node(n, snakemake, node):
     res_gens = [name + " " + g for g in ci['res_techs']]
     weights = n.snapshot_weightings["generators"]
 
-
     res = (n.model['Generator-p'].loc[:,res_gens] * weights).sum("Generator")
 
-    electrolysis = (n.model['Link-p'].loc[:,f"{name} H2 Electrolysis"] * weights)
+    electrolysis = (n.model['Link-p'].loc[:,[f"{name} H2 Electrolysis"]] * weights).sum("Link")
 
 
     # there is no import so I think we don't need this constraint
@@ -310,7 +308,7 @@ def excess_constraints_node(n, snakemake, node):
 
     lhs = res - electrolysis*allowed_excess
 
-    n.model.add_constraints(lhs <= 0, name=f"{node.split(' ')[0]}_RES_hourly_excess")
+    n.model.add_constraints(lhs <= 0, name=f"{node.split(' ')[0]}_hourly_excess")
 
 
 def solve(policy, n):
