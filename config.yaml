@@ -19,11 +19,9 @@ scenario:
   policy: ["ref", "exl1p0", "exl1p2", "res1p2"]  
   # all options: "ref", "grd", "res1p0","res1p2","res1p3", "exl1p0","exl1p2","exl1p3", "offgrid", "monthly"
   # ref: no H2 demand
-  # grd: no matching requirement, grid electricity
-  # res: annual matching requirement
-  # exl: hourly matching requirement
-  # 1p0: 100% matching; 1p2: possible to sell 20% surplus annually
-  # exl1p0 equals offgrid
+  # grd: H2 demand met from grid with no local procurement
+  # res: H2 elec demand matched by procured wind and solar annually
+  # exl: like cfe100 but excess limited to 20%
   palette: [ "p1", # onwind + solar + battery
             ]
   zone: ["DE"]
@@ -75,8 +73,8 @@ global:
   must_run: False  # must run condition for coal power plants
   uc: False  # unit commitment for conventional plants
   policy_type: "co2 cap" # one of ["co2 cap", "co2 price"]
-  co2_baseline: 86474161  # MtCO2/a - based on previous results with co2 price
-  co2_share: 1
+  co2_baseline: 2.2694e8  # MtCO2/a - based on previous results with co2 price
+  co2_share: 0.3 #pu  - rough target for 2030
   limit_res_exp_2025: 2 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology
   limit_res_exp_2030: 4 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology
   co2_price_2025: 80 # EUR/tCO2

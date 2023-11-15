@@ -60,7 +60,8 @@ if config["solving_option"] == "together":
             network2030 = config['n_2030'],
             network2025 = config['n_2025'],
             costs2030=CDIR + "/costs_2030.csv",
-            costs2025=CDIR + "/costs_2025.csv"
+            costs2025=CDIR + "/costs_2025.csv",
+            demand = "data/Demand/Demand_Time_Series/Demand_TimeSeries_{year}_NationalTrends_without_bat.xlsx"
         output:
             network=RDIR + "/networks/{year}/{zone}/{palette}/{policy}_{res_share}_{offtake_volume}volume_{storage}.nc"
         log:
