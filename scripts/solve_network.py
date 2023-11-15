@@ -107,7 +107,8 @@ def cost_parametrization(n, snakemake):
     n.generators.loc[n.generators.carrier=="onwind", "marginal_cost"] = 0.015
 
     # Override fuel cell parameters with that of ccgt for cheaper and more efficient hydrogen reconversion
-    for param in ['capital_cost', 'marginal_cost', 'efficiency', 'lifetime']:
+    n.links.loc[n.links.carrier == 'H2 Fuel Cell', 'capital_cost'] = 1.05 * n.links.loc['DE1 0 CCGT-2025', 'capital_cost']
+    for param in ['marginal_cost', 'efficiency', 'lifetime']:
         n.links.loc[n.links.carrier == 'H2 Fuel Cell', param] = n.links.loc['DE1 0 CCGT-2025', param]
     
 
