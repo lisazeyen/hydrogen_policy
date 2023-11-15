@@ -204,7 +204,6 @@ def res_constraints(n, snakemake):
     for country in country_targets.keys():
         
         node = geoscope(n, country, area)['node']
-    
         res_constraints_node(n, snakemake, node)
 
 
@@ -223,7 +222,7 @@ def res_constraints_node(n, snakemake, node):
 
     res = (n.model['Generator-p'].loc[:,res_gens] * weights).sum()
 
-    electrolysis = (n.model['Link-p'].loc[:,f"{name} H2 Electrolysis"] * weights).sum()
+    electrolysis = (n.model['Link-p'].loc[:,[f"{name} H2 Electrolysis"]] * weights).sum()
 
     lhs = res - electrolysis
 
@@ -251,6 +250,8 @@ def monthly_constraints(n, snakemake):
 
 
 def monthly_constraints_node(n, snakemake, node):
+    
+    breakpoint()
 
     ci = snakemake.config['ci']
     ci_name = ci['name']    
