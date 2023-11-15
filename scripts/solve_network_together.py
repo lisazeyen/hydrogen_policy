@@ -260,6 +260,9 @@ if __name__ == "__main__":
     )
     n.stores.loc[store_i, "capital_cost"] = store_cost 
 
+    if not snakemake.config["scenario"]["h2_pipelines"]:
+        remove_i = n.links[n.links.carrier=="H2 pipeline"].index
+        n.mremove("Link", remove_i)
 
     Nyears = 1 # years in simulation
     costs = prepare_costs(timescope(zone, year, snakemake)['costs_projection'],

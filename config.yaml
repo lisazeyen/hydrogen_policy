@@ -12,7 +12,7 @@ n_2030: 'input/elec_s_37_lv1.0__1H-B-solar+p3_2030.nc'
 ###################
 # Scenario controls
 
-run: 'co2_price'
+run: 'no_h2_pipelines'
 
 #wildcards
 scenario:
@@ -29,6 +29,7 @@ scenario:
   res_share: [p0] #p0 is base assumption, others give the share, e.g. p10 would be 10% RES share
   offtake_volume: [3200] # [3200, 6050]  # [MWh_H2 per h] fixed offtake volume per hour, updated German hydrogen strategy, local production between 28-53 TWh_H2 per year in 2030, 10 GB planned in DE by 2030 if run 100% 10GB*0.67=6700MWh/h
   storage: ["mtank"] # ["flexibledemand", "underground", "mtank", "htank", "nostore"]  # storage type at hydrogen production
+  h2_pipelines: False
   h2_demand_added: False
   temporal_resolution: "1H"
   DE_target: True
@@ -70,9 +71,9 @@ additional_nodes: ["EU oil","EU gas", "EU lignite", "EU coal", "EU uranium", "EU
 global:
   must_run: False  # must run condition for coal power plants
   uc: False  # unit commitment for conventional plants
-  policy_type: "co2 price" # one of ["co2 cap", "co2 price"]
-  co2_baseline: 2.2694e8  # MtCO2/a - based on previous results with co2 price
-  co2_share: 0.3 #pu  - rough target for 2030
+  policy_type: "co2 cap" # one of ["co2 cap", "co2 price"]
+  co2_baseline: 130033711  # MtCO2/a - based on previous results with co2 price
+  co2_share: 1.0  #pu  - rough target for 2030
   limit_res_exp_2025: 2 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology
   limit_res_exp_2030: 4 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology
   co2_price_2025: 80 # EUR/tCO2
