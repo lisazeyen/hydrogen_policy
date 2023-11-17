@@ -12,25 +12,26 @@ n_2030: 'input/elec_s_37_lv1.0__1H-B-solar+p3_2030.nc'
 ###################
 # Scenario controls
 
-run: 'new_load'
+run: 'test'
 
 #wildcards
 scenario:
-  policy:  ["ref"] #, "grd", "res1p0","res1p2","res1p3", "exl1p0","exl1p2","exl1p3", "offgrid", "monthly"]
+  policy: ["ref", "exl1p0", "exl1p2", "res1p2"]  
+  # all options: "ref", "grd", "res1p0","res1p2","res1p3", "exl1p0","exl1p2","exl1p3", "offgrid", "monthly"
   # ref: no H2 demand
   # grd: H2 demand met from grid with no local procurement
   # res: H2 elec demand matched by procured wind and solar annually
   # exl: like cfe100 but excess limited to 20%
   palette: [ "p1", # onwind + solar + battery
             ]
-  zone: [ "DE",
-        ]
+  zone: ["DE"]
   year: ['2030'] # controls both the brownfield fleet and tech costs projection
+  # all options: ['2025', '2030']
   res_share: [p0] #p0 is base assumption, others give the share, e.g. p10 would be 10% RES share
-  offtake_volume: [3200] # [3200, 6050]  # [MWh_H2 per h] fixed offtake volume per hour, updated German hydrogen strategy, local production between 28-53 TWh_H2 per year in 2030, 10 GB planned in DE by 2030 if run 100% 10GB*0.67=6700MWh/h
+  offtake_volume: [4000]  # full load hours to get from GW_el targets to MWh_H2 offtake per hour
   storage: ["underground"] # ["flexibledemand", "underground", "mtank", "htank", "nostore"]  # storage type at hydrogen production
   h2_demand_added: False
-  temporal_resolution: "24H"
+  temporal_resolution: "25H"
   DE_target: True
 
 
@@ -41,6 +42,7 @@ ci:
   res_techs: ["onwind","solar"]
 
 # regional coverage of the model: "regions" or "EU"
+# "test" -> one country only (?)
 # "regions" -> strips the model to country where CI load is located + all neighboring countries
 # "EU" -> keeps the whole European power system (full ENTSO-E area)
 area: "regions" #"regions"
@@ -173,6 +175,19 @@ res_target_2030:
   ES: 0.74   # p.10 https://energy.ec.europa.eu/system/files/2021-01/staff_working_document_assessment_necp_spain_en_0.pdf
   PT: 0.8  # p.41 Table 9 https://energy.ec.europa.eu/system/files/2020-06/pt_final_necp_main_en_0.pdf
   # SE:
+
+# Electrolyzer targets in GW_el
+h2_target_2030:
+  DE: 10
+  AT: 1
+  BE: 1.5
+  DK: 5
+  FR: 6.5
+  GB: 7.14
+  NL: 8
+  #NO: 1
+  PL: 1.43
+  SE: 1
 
 solving:
   #tmpdir: "path/to/tmp"

@@ -441,10 +441,11 @@ def calculate_hydrogen_cost(n, label, h2_cost):
     p_import = n.links_t.p0.loc[:,n.links.carrier=="import"]
     p_export = n.links_t.p0.loc[:,n.links.carrier=="export"]
     # marginal price
-    name = snakemake.config['ci']['name']
+    ci_name = snakemake.config['ci']['name']
     zone = snakemake.wildcards.zone
     area = snakemake.config['area']
     node = geoscope(n, zone, area)['node']
+    name = f"{ci_name} {node.split(' ')[0]}"
     weight = n.snapshot_weightings.generators
     price = n.buses_t.marginal_price.loc[:, node].mul(weight)
     # import costs
