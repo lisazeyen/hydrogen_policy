@@ -251,15 +251,19 @@ if __name__ == "__main__":
     remove_i = n.links[n.links.carrier.str.contains("biomass boiler")].index
     n.mremove("Link", remove_i)
     
-    # adjust hydrogen storage in background system to medium pressure
+    # adjust hydrogen storage in background system
+    store_type = snakemake.config["scenario"]["h2_background"]["storage"]
     store_i = n.stores[n.stores.carrier=="H2 Store"].index
-    store_cost = snakemake.config["global"]["H2_store_cost"]["mtank"][float(year)]
+    store_cost = snakemake.config["global"]["H2_store_cost"][store_type][float(year)]
     logger.info(
     "Setting hydrogen storage costs in the background system"
     " to medium pressure steel tanks in all countries."
     )
     n.stores.loc[store_i, "capital_cost"] = store_cost 
 
+    if not snakemake.config["scenario"]["h2_background"]["pipelines"]:
+        remove_i = n.links[n.links.carrier=="H2 pipeline"].index
+        n.mremove("Link", remove_i)
 
     Nyears = 1 # years in simulation
     costs = prepare_costs(timescope(zone, year, snakemake)['costs_projection'],

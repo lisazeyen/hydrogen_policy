@@ -12,7 +12,7 @@ n_2030: 'input/elec_s_37_lv1.0__1H-B-solar+p3_2030.nc'
 ###################
 # Scenario controls
 
-run: 'test'
+run: 'country_targets'
 
 #wildcards
 scenario:
@@ -29,9 +29,12 @@ scenario:
   # all options: ['2025', '2030']
   res_share: [p0] #p0 is base assumption, others give the share, e.g. p10 would be 10% RES share
   offtake_volume: [4000]  # full load hours to get from GW_el targets to MWh_H2 offtake per hour
-  storage: ["underground"] # ["flexibledemand", "underground", "mtank", "htank", "nostore"]  # storage type at hydrogen production
+  storage: ["mtank"] # ["flexibledemand", "underground", "mtank", "htank", "nostore"]  # storage type at hydrogen production
+  h2_background: 
+    pipelines: False
+    storage: "mtank"
   h2_demand_added: False
-  temporal_resolution: "25H"
+  temporal_resolution: "1H"
   DE_target: True
 
 
@@ -45,7 +48,7 @@ ci:
 # "test" -> one country only (?)
 # "regions" -> strips the model to country where CI load is located + all neighboring countries
 # "EU" -> keeps the whole European power system (full ENTSO-E area)
-area: "regions" #"regions"
+area: "regions" # ["test", "regions"]
 
 ###################
 # Fixed settings
@@ -73,8 +76,8 @@ global:
   must_run: False  # must run condition for coal power plants
   uc: False  # unit commitment for conventional plants
   policy_type: "co2 cap" # one of ["co2 cap", "co2 price"]
-  co2_baseline: 2.2694e8  # MtCO2/a - based on previous results with co2 price
-  co2_share: 0.3 #pu  - rough target for 2030
+  co2_baseline: 130033711  # MtCO2/a - based on previous results with co2 price
+  co2_share: 1.0  #pu  - rough target for 2030
   limit_res_exp_2025: 2 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology
   limit_res_exp_2030: 4 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology
   co2_price_2025: 80 # EUR/tCO2
