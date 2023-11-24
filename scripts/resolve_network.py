@@ -20,28 +20,35 @@ from solve_network import geoscope, freeze_capacities, add_battery_constraints
 
 def add_H2(n, snakemake):
 
-    area = snakemake.config['area']
     year = snakemake.wildcards.year
-    policy = snakemake.wildcards.policy
     country_targets = snakemake.config[f"h2_target_{year}"]
     
     for country, target in country_targets.items():
         
-        node = geoscope(n, country, area)['node']
-    
-        # remove electricity demand of electrolysis
-        load_i = pd.Index([f"{node} electrolysis demand"])
-        if load_i[0] in n.loads.index:
-            n.mremove("Load", load_i)
-        if policy == "ref":
-            continue
+        nodes = n.buses[(n.buses.index.str[:2]==country) & (n.buses.country != '')].index
         
-        add_H2_node(n, snakemake, node, target)
+        if nodes.empty: 
+            continue
+        elif len(nodes) > 1:
+            # Denmark
+            add_H2_node(n, snakemake, "DK1 0", .5 * target)
+            add_H2_node(n, snakemake, "DK2 0", .5 * target)
+        else:
+            add_H2_node(n, snakemake, nodes[0], target)
 
 
 def add_H2_node(n, snakemake, node, target):
     
+    policy = snakemake.wildcards.policy
+    
+    # remove electricity demand of electrolysis
+    load_i = pd.Index([f"{node} electrolysis demand"])
+    if load_i[0] in n.loads.index:
+        n.mremove("Load", load_i)
+    if policy == "ref":
+        pass
     year = snakemake.wildcards.year
+    
     policy = snakemake.wildcards.policy
     ci_name = snakemake.config['ci']['name']
     flh = snakemake.wildcards.offtake_volume
@@ -197,13 +204,9 @@ def add_dummies(n):
 
 def res_constraints(n, snakemake):
 
-    area = snakemake.config['area']
-    year = snakemake.wildcards.year
-    country_targets = snakemake.config[f"h2_target_{year}"]
+    ci_nodes = n.buses[(n.buses.index.str[:2]=='CI') & (n.buses.carrier == 'AC')].index 
     
-    for country in country_targets.keys():
-        
-        node = geoscope(n, country, area)['node']
+    for node in ci_nodes:
         res_constraints_node(n, snakemake, node)
 
 
@@ -212,13 +215,12 @@ def res_constraints_node(n, snakemake, node):
 
     ci = snakemake.config['ci']
     ci_name = ci['name']
-    name = f"{ci_name} {node.split(' ')[0]}"
+    name = f"{ci_name} {node.split(' ')[1]}"
     policy = snakemake.wildcards.policy
 
     weights = n.snapshot_weightings["generators"]
 
     res_gens = [name + " " + g for g in ci['res_techs']]
-
 
     res = (n.model['Generator-p'].loc[:,res_gens] * weights).sum()
 
@@ -238,14 +240,9 @@ def res_constraints_node(n, snakemake, node):
 
 def monthly_constraints(n, snakemake):
 
-    area = snakemake.config['area']
-    year = snakemake.wildcards.year
-    country_targets = snakemake.config[f"h2_target_{year}"]
+    ci_nodes = n.buses[(n.buses.index.str[:2]=='CI') & (n.buses.carrier == 'AC')].index 
     
-    for country in country_targets.keys():
-        
-        node = geoscope(n, country, area)['node']
-    
+    for node in ci_nodes:
         monthly_constraints_node(n, snakemake, node)
 
 
@@ -254,7 +251,7 @@ def monthly_constraints_node(n, snakemake, node):
 
     ci = snakemake.config['ci']
     ci_name = ci['name']    
-    name = f"{ci_name} {node.split(' ')[0]}"
+    name = f"{ci_name} {node.split(' ')[1]}"
     
     res_gens = [name + " " + g for g in ci['res_techs']]
     weights = n.snapshot_weightings["generators"]
