@@ -104,17 +104,7 @@ def DE_targets(n, snakemake):
         }
     
     year = snakemake.wildcards.year    
-    
-    # scale electricity demand
-    current_load = (n.loads_t.p_set
-                    .mul(n.snapshot_weightings.generators, axis=0)["DE1 0"]
-                    .sum())/1e6
-    load_scale = {"2025":590/current_load,
-                  "2030":(726-37)/current_load}
-    logger.info("Increasing electricity demand by factor %.2f",
-                round(load_scale[year], ndigits=2))
-    n.loads_t.p_set["DE1 0"] *= load_scale[year]
-    
+     
     # scale wind
     existing_wind = n.generators[(n.generators.index.str[:2]=="DE")
                                  &(n.generators.carrier=="offwind")].p_nom.sum()
