@@ -325,18 +325,19 @@ def country_res_constraints(n, snakemake):
     for ct in country_targets.keys():
 
         grid_buses = n.buses.index[(n.buses.index.str[:2]==ct)]
-        ci_grid_buses = n.buses.index[(n.buses.index.str[:(len(ci_name)+3)]== f"{ci_name} {ct}")]
+        ci_grid_buses = n.buses.index[(n.buses.index.str[:(len(ci_name)+3)]==f"{ci_name} {ct}")]
+        all_grid_buses = n.buses.index[(n.buses.index.str[:2]==ct) | (n.buses.index.str[:(len(ci_name)+3)]==f"{ci_name} {ct}")]
         
         if grid_buses.empty: continue
 
         grid_loads = n.loads.index[n.loads.bus.isin(grid_buses)]
         ci_grid_loads = n.loads.index[n.loads.bus.isin(ci_grid_buses)]
         
-        country_res_gens = n.generators.index[n.generators.bus.isin(grid_buses)
+        country_res_gens = n.generators.index[n.generators.bus.isin(all_grid_buses)
                                               & n.generators.carrier.isin(grid_res_techs)]
-        country_res_links = n.links.index[n.links.bus1.isin(grid_buses)
+        country_res_links = n.links.index[n.links.bus1.isin(all_grid_buses)
                                           & n.links.carrier.isin(grid_res_techs)]
-        country_res_storage_units = n.storage_units.index[n.storage_units.bus.isin(grid_buses)
+        country_res_storage_units = n.storage_units.index[n.storage_units.bus.isin(all_grid_buses)
                                                           & n.storage_units.carrier.isin(grid_res_techs)]
 
         eff_links = n.links.loc[country_res_links, "efficiency"]
@@ -358,7 +359,7 @@ def country_res_constraints(n, snakemake):
         if ci_grid_loads.empty:
             total_load = el_load
         else:
-            h2_load = (n.loads.p_set[ci_grid_loads]*len(n.loads_t)*weights).sum()
+            h2_load = n.loads.p_set[ci_grid_loads].sum()*8760
             h2_efficiency = n.links[n.links.carrier=="H2 Electrolysis"].efficiency.mean()
             total_load = el_load + h2_load / h2_efficiency
 
