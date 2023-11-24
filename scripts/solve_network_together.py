@@ -319,6 +319,12 @@ if __name__ == "__main__":
 
         n = solve_network(n, tech_palette)
         
+        # save shadow prices from temporal matching
+        for key in n.model.dual.keys():
+            if "matching" in key:
+                shadow_price = n.model.dual[key].data
+                n.global_constraints.loc[key, "mu"] = shadow_price
+                
         n.export_to_netcdf(snakemake.output.network)
 
     logger.info("Maximum memory usage: {}".format(mem.mem_usage))
