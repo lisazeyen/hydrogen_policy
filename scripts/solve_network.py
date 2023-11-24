@@ -381,7 +381,7 @@ def country_res_constraints(n, snakemake):
 
         n.add(
             "GlobalConstraint",
-            f"GlobalConstraint-country_res_constraints_{ct}",
+            f"country_res_constraints_{ct}",
             constant=target*total_load,
             sense=">=",
             type="",
