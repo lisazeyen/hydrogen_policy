@@ -321,8 +321,8 @@ def country_res_constraints(n, snakemake):
     weights = n.snapshot_weightings["generators"]
     grid_res_techs = snakemake.config['global']['grid_res_techs']
 
-
     for ct in country_targets.keys():
+        
 
         if ct == zone:
             grid_buses = n.buses.index[(n.buses.index.str[:2]==ct) |
@@ -378,6 +378,14 @@ def country_res_constraints(n, snakemake):
         logger.info(f"country RES constraints for {ct} {target} and total load {round(total_load/1e6)} TWh")
 
         n.model.add_constraints(lhs >= target*total_load, name=f"GlobalConstraint-country_res_constraints_{ct}")
+
+        n.add(
+            "GlobalConstraint",
+            f"GlobalConstraint-country_res_constraints_{ct}",
+            constant=target*total_load,
+            sense=">=",
+            type="",
+        )
 
 
 def add_unit_committment(n):
