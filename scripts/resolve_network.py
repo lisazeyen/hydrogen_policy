@@ -208,7 +208,6 @@ def res_constraints(n, snakemake):
 
 
 def res_constraints_node(n, snakemake, node):
-    print("set res constraint")
 
     ci = snakemake.config['ci']
     ci_name = ci['name']
