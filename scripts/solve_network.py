@@ -324,16 +324,14 @@ def country_res_constraints(n, snakemake):
 
     for ct in country_targets.keys():
 
-        if ct == zone:
-            grid_buses = n.buses.index[(n.buses.index.str[:2]==ct) |
-                                       (n.buses.index == f"{ci_name}")]
-        else:
-            grid_buses = n.buses.index[(n.buses.index.str[:2]==ct)]
-
+        grid_buses = n.buses.index[(n.buses.index.str[:2]==ct)]
+        ci_grid_buses = n.buses.index[(n.buses.index.str[:(len(ci_name)+3)]== f"{ci_name} {ct}")]
+        
         if grid_buses.empty: continue
 
         grid_loads = n.loads.index[n.loads.bus.isin(grid_buses)]
-
+        ci_grid_loads = n.loads.index[n.loads.bus.isin(ci_grid_buses)]
+        
         country_res_gens = n.generators.index[n.generators.bus.isin(grid_buses)
                                               & n.generators.carrier.isin(grid_res_techs)]
         country_res_links = n.links.index[n.links.bus1.isin(grid_buses)
@@ -341,10 +339,7 @@ def country_res_constraints(n, snakemake):
         country_res_storage_units = n.storage_units.index[n.storage_units.bus.isin(grid_buses)
                                                           & n.storage_units.carrier.isin(grid_res_techs)]
 
-
-
         eff_links = n.links.loc[country_res_links, "efficiency"]
-
 
         gens =  n.model['Generator-p'].loc[:,country_res_gens] * weights
         links = n.model['Link-p'].loc[:,country_res_links] * eff_links * weights
@@ -358,21 +353,14 @@ def country_res_constraints(n, snakemake):
             target = float(snakemake.wildcards.res_share.replace("m","-").replace("p","."))
 
 
-        total_load = (n.loads_t.p_set[grid_loads].sum(axis=1)*weights).sum() # number
-
-        # add for ct in zone electrolysis demand to load if not "reference" scenario
-        # if (ct==zone) and (f"{ci_name}" in n.buses.index):
-
-        #     logger.info("Consider electrolysis demand for RES target.")
-        #     # H2 demand in zone
-        #     offtake_volume = float(snakemake.wildcards.offtake_volume)
-        #     # efficiency of electrolysis
-        #     efficiency = n.links[n.links.carrier=="H2 Electrolysis"].efficiency.mean()
-
-        #     # electricity demand of electrolysis
-        #     demand_electrolysis = (offtake_volume/efficiency
-        #                             *n.snapshot_weightings.generators).sum()
-        #     total_load += demand_electrolysis
+        el_load = (n.loads_t.p_set[grid_loads].sum(axis=1)*weights).sum() # number
+        
+        if ci_grid_loads.empty:
+            total_load = el_load
+        else:
+            h2_load = (n.loads.p_set[ci_grid_loads]*len(n.loads_t)*weights).sum()
+            h2_efficiency = n.links[n.links.carrier=="H2 Electrolysis"].efficiency.mean()
+            total_load = el_load + h2_load / h2_efficiency
 
         print(f"country RES constraints for {ct} {target} and total load {round(total_load/1e6, ndigits=2)} TWh")
         logger.info(f"country RES constraints for {ct} {target} and total load {round(total_load/1e6)} TWh")
