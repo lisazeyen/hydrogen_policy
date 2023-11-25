@@ -12,11 +12,11 @@ n_2030: 'input/elec_s_37_lv1.0__1H-B-solar+p3_2030.nc'
 ###################
 # Scenario controls
 
-run: 'country_targets'
+run: '2023-11-25'
 
 #wildcards
 scenario:
-  policy: ["ref", "exl1p0", "exl1p2", "res1p2"]  
+  policy: ["ref" , "grd", "res1p2", "exl1p2"]  
   # all options: "ref", "grd", "res1p0","res1p2","res1p3", "exl1p0","exl1p2","exl1p3", "offgrid", "monthly"
   # ref: no H2 demand
   # grd: H2 demand met from grid with no local procurement
@@ -76,7 +76,7 @@ global:
   must_run: False  # must run condition for coal power plants
   uc: False  # unit commitment for conventional plants
   policy_type: "co2 cap" # one of ["co2 cap", "co2 price"]
-  co2_baseline: 130033711  # MtCO2/a - based on previous results with co2 price
+  co2_baseline: 126913232  # MtCO2/a - based on previous results with co2 price
   co2_share: 1.0  #pu  - rough target for 2030
   limit_res_exp_2025: 2 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology
   limit_res_exp_2030: 4 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology

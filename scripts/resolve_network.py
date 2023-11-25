@@ -9,6 +9,9 @@ logger = logging.getLogger(__name__)
 # Suppress logging of the slack bus choices
 pypsa.pf.logger.setLevel(logging.WARNING)
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 from vresutils.benchmark import memory_logger
 
 
@@ -208,7 +211,6 @@ def res_constraints(n, snakemake):
 
 
 def res_constraints_node(n, snakemake, node):
-    print("set res constraint")
 
     ci = snakemake.config['ci']
     ci_name = ci['name']
