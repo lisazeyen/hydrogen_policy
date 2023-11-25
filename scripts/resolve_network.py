@@ -9,6 +9,9 @@ logger = logging.getLogger(__name__)
 # Suppress logging of the slack bus choices
 pypsa.pf.logger.setLevel(logging.WARNING)
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 from vresutils.benchmark import memory_logger
 
 
