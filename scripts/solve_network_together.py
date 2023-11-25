@@ -40,6 +40,9 @@ def solve_network(n, tech_palette):
         elif "exl" in policy:
             logger.info("setting excess limit on hourly matching")
             excess_constraints(n, snakemake)
+            
+        if snakemake.config["scenario"]["DE_target"] and "DE" in n.buses.country.unique():
+            DE_targets_res(n, snakemake)
 
 
     if snakemake.config["global"]["must_run"]:
@@ -77,6 +80,23 @@ def solve_network(n, tech_palette):
     
     return n
 
+capacities_2025 = {
+     "coal": 8e3,   # p.11 [1]
+     "lignite": 14e3, # p.11 [1]
+     "gas": 37e3,  # p.11 [1]
+     "solar":  108e3,    # p.22 [1]
+     "onwind": 77e3,  # p.22 [1]
+     "offwind": 12e3,  # p.22 [1]
+     }
+ 
+capacities_2030 = {
+     "coal": 0,   # p.11 [1]
+     "lignite": 0, # p.11 [1]
+     "gas": 46e3,  # p.11 [1]
+     "solar":  215e3,    # p.22 [1]
+     "onwind": 115e3,  # p.22 [1]
+     "offwind": 30e3 ,  # p.22 [1]
+     }
 
 def DE_targets(n, snakemake):
     
@@ -85,41 +105,10 @@ def DE_targets(n, snakemake):
     [1] https://static.agora-energiewende.de/fileadmin/Projekte/2021/2021_11_DE_KNStrom2035/A-EW_264_KNStrom2035_WEB.pdf
     
     """  
-    capacities_2025 = {
-        "coal": 8e3,   # p.11 [1]
-        "lignite": 14e3, # p.11 [1]
-        "gas": 37e3,  # p.11 [1]
-        "solar":  108e3,    # p.22 [1]
-        "onwind": 77e3,  # p.22 [1]
-        "offwind-dc": 12e3,  # p.22 [1]
-        }
-    
-    capacities_2030 = {
-        "coal": 0,   # p.11 [1]
-        "lignite": 0, # p.11 [1]
-        "gas": 46e3,  # p.11 [1]
-        "solar":  215e3,    # p.22 [1]
-        "onwind": 115e3,  # p.22 [1]
-        "offwind-dc": 30e3 ,  # p.22 [1]
-        }
     
     year = snakemake.wildcards.year    
-    
-    # scale electricity demand
-    current_load = (n.loads_t.p_set
-                    .mul(n.snapshot_weightings.generators, axis=0)["DE1 0"]
-                    .sum())/1e6
-    load_scale = {"2025":590/current_load,
-                  "2030":(726-37)/current_load}
-    logger.info("Increasing electricity demand by factor %.2f",
-                round(load_scale[year], ndigits=2))
-    n.loads_t.p_set["DE1 0"] *= load_scale[year]
-    
-    # scale wind
-    existing_wind = n.generators[(n.generators.index.str[:2]=="DE")
-                                 &(n.generators.carrier=="offwind")].p_nom.sum()
+ 
     capacities = capacities_2025 if year=="2025" else capacities_2030  
-    capacities["offwind-dc"] -= existing_wind
     
     # conventional
     for carrier in ["lignite", "coal"]:
@@ -130,20 +119,56 @@ def DE_targets(n, snakemake):
         n.links.loc[links_i, "p_nom_extendable"] = False 
         logger.info(f"Scaling capacity of {carrier} by {scale_factor}")
      
-    # renewable
-    c = "Generator"
-    for carrier in ["offwind-dc", "solar", "onwind"]:
-        gens_i = n.df(c)[(n.df(c).carrier==carrier)&(n.df(c).index.str[:2]=="DE")].index
-        if carrier=="offwind-dc":
-            n.df(c).loc[gens_i, "p_nom"] = capacities[carrier] 
-        else:
-            scale_factor = capacities[carrier] / n.df(c).p_nom.loc[gens_i].sum()
-            n.df(c).loc[gens_i, "p_nom"] *= scale_factor
-            print(f"Scaling capacity of {carrier} by {scale_factor}")
         
     return n
 
 
+def DE_targets_res(n, snakemake, include_ci=True):
+    """Add constraint for renewable capacities in Germany."""
+    
+    year = snakemake.wildcards.year   
+    capacities = capacities_2025 if year=="2025" else capacities_2030  
+    
+    # renewable
+    c = "Generator"
+    for carrier in ["offwind", "solar", "onwind"]:
+        if include_ci:
+            res_bool = ((n.df(c).carrier.str.contains(carrier))
+                        & ((n.df(c).index.str[:2]=="DE") | (n.df(c).index.str[:5]=="CI DE")))
+        else:
+            res_bool = ((n.df(c).carrier.str.contains(carrier))
+                        &(n.df(c).index.str[:2]=="DE"))
+        ext_i = (n.generators.p_nom_extendable & res_bool)
+        fix_i = (~n.generators.p_nom_extendable & res_bool)
+        gens_i = n.df(c)[ext_i].index
+        planned_capacities = capacities[carrier] 
+        existing = n.generators.loc[fix_i, "p_nom"].sum()
+        rhs = planned_capacities - existing
+        max_pot = n.generators.loc[gens_i, "p_nom_max"].sum()
+        if rhs>max_pot:
+            logger.info("Warning, technical potential of {carrier} is smaller than planned capacity")
+        p_nom = n.model[f"{c}-p_nom"].loc[gens_i].sum("Generator-ext")
+        logger.info(
+        f"------------------------------------------"
+        f"Add constraint for {carrier}: existing capacities {existing/1e3} GW, "
+        f"planned capacities {planned_capacities/1e3} GW, remaining {rhs/1e3} GW "
+        f"have to be fullfilled by {gens_i}"
+        f"------------------------------------------"
+        )
+
+       
+        n.model.add_constraints(
+           p_nom >= rhs,
+           name=f"GlobalConstraint-DE_target_{carrier}",
+        )
+        n.add(
+           "GlobalConstraint",
+           f"DE_target_{carrier}",
+           constant=rhs,
+           sense=">=",
+           type="",
+           )
+    
 def add_entsoe_demand(n):
     """
     Add demand forecast from ENTSO-E ERAA [1] 
@@ -283,6 +308,7 @@ if __name__ == "__main__":
     cost_parametrization(n, snakemake)
     set_co2_policy(n, snakemake, costs)
     
+    # add conventional power plant targets here and RES as constraint
     if snakemake.config["scenario"]["DE_target"] and "DE" in n.buses.country.unique():
         n = DE_targets(n, snakemake)
 
@@ -293,6 +319,12 @@ if __name__ == "__main__":
 
         n = solve_network(n, tech_palette)
         
+        # save shadow prices from temporal matching
+        for key in n.model.dual.keys():
+            if "matching" in key:
+                shadow_price = n.model.dual[key].data
+                n.global_constraints.loc[key, "mu"] = shadow_price
+                
         n.export_to_netcdf(snakemake.output.network)
 
     logger.info("Maximum memory usage: {}".format(mem.mem_usage))

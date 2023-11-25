@@ -374,7 +374,6 @@ def country_res_constraints(n, snakemake):
         #                             *n.snapshot_weightings.generators).sum()
         #     total_load += demand_electrolysis
 
-        print(f"country RES constraints for {ct} {target} and total load {round(total_load/1e6, ndigits=2)} TWh")
         logger.info(f"country RES constraints for {ct} {target} and total load {round(total_load/1e6)} TWh")
 
         n.model.add_constraints(lhs >= target*total_load, name=f"GlobalConstraint-country_res_constraints_{ct}")
