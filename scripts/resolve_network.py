@@ -46,7 +46,7 @@ def add_H2_node(n, snakemake, node, target):
     if load_i[0] in n.loads.index:
         n.mremove("Load", load_i)
     if policy == "ref":
-        pass
+        return None
     year = snakemake.wildcards.year
     
     policy = snakemake.wildcards.policy
