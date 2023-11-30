@@ -202,12 +202,30 @@ def add_dummies(n):
             marginal_cost=1e6)
 
 
+def res_max_capacity(n, snakemake, ci_node):
+
+    year = snakemake.wildcards.year
+
+    # Capacity limit
+    for carrier in ["onwind","solar"]:
+        
+        c = ci_node.split(" ")[1]
+        c_tech = f'{c} 0 {carrier}-{year}'
+        ci_tech = f'{ci_node} {carrier}'
+        lhs = n.model['Generator-p_nom'][c_tech] + n.model['Generator-p_nom'][ci_tech]
+        
+        max_capa = n.generators.loc[c_tech, 'p_nom_max']
+
+        n.model.add_constraints(lhs <= max_capa, name=f'{c}_{carrier}_max_capacity')
+
+
 def res_constraints(n, snakemake):
 
     ci_nodes = n.buses[(n.buses.index.str[:2]=='CI') & (n.buses.carrier == 'AC')].index 
     
     for node in ci_nodes:
         res_constraints_node(n, snakemake, node)
+        res_max_capacity(n, snakemake, node)
 
 
 def res_constraints_node(n, snakemake, node):
@@ -243,6 +261,7 @@ def monthly_constraints(n, snakemake):
     
     for node in ci_nodes:
         monthly_constraints_node(n, snakemake, node)
+        res_max_capacity(n, snakemake, node)
 
 
 def monthly_constraints_node(n, snakemake, node):

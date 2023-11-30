@@ -89,11 +89,13 @@ capacities_2025 = {
      "offwind": 12e3,  # p.22 [1]
      }
  
+# [2] https://www.bund-nrw.de/fileadmin/nrw/dokumente/braunkohle/221128_EBC_Aurora_Kohleausstiegspfad_und_Emissionen_as_sent.pdf
+# [3] https://www.wirtschaft.nrw/system/files/media/document/file/eckpunktepapier-rwe-kohleausstieg_0.pdf
 capacities_2030 = {
-     "coal": 0,   # p.11 [1]
-     "lignite": 0, # p.11 [1]
+     "coal": 8e3,  # [2]
+     "lignite": 6e3,  # [2, 3]
      "gas": 46e3,  # p.11 [1]
-     "solar":  215e3,    # p.22 [1]
+     "solar": 215e3,    # p.22 [1]
      "onwind": 115e3,  # p.22 [1]
      "offwind": 30e3 ,  # p.22 [1]
      }
@@ -113,11 +115,12 @@ def DE_targets(n, snakemake):
     # conventional
     for carrier in ["lignite", "coal"]:
         links_i = n.links[(n.links.carrier==carrier)&(n.links.index.str[:2]=="DE")].index
-        scale_factor = capacities[carrier] / n.links.p_nom.mul(n.links.efficiency).loc[links_i].sum()
+        original_capacity = n.links.p_nom.mul(n.links.efficiency).loc[links_i].sum()
+        scale_factor = capacities[carrier] / original_capacity
         scale_factor = 0 if np.isnan(scale_factor) else scale_factor
         n.links.loc[links_i, "p_nom"] *= scale_factor
         n.links.loc[links_i, "p_nom_extendable"] = False 
-        logger.info(f"Scaling capacity of {carrier} by {scale_factor}")
+        logger.info(f"Scaling capacity of {carrier} by {scale_factor} from {original_capacity} to {capacities[carrier]}")
      
         
     return n
