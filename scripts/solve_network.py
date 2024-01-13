@@ -324,8 +324,11 @@ def country_res_constraints(n, snakemake):
 
     for ct, target in country_targets.items():
 
-        # Override target for focus zone if not "p0"
-        if  (snakemake.wildcards.res_share!="p0") and (ct == zone):
+        # Scale or override target if not "p0"
+        if snakemake.wildcards.res_share[0]=="x":
+            factor = float(snakemake.wildcards.res_share[1:].replace("m","-").replace("p","."))
+            target *= factor
+        elif  (snakemake.wildcards.res_share!="p0") and (ct == zone):
             target = float(snakemake.wildcards.res_share.replace("m","-").replace("p","."))
 
         # Select grid buses
