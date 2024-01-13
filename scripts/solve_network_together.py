@@ -262,7 +262,10 @@ if __name__ == "__main__":
     logger.info(f"Geoscope: {area}")
 
     res_share = float(snakemake.wildcards.res_share.replace("m","-").replace("p","."))
-    if  snakemake.wildcards.res_share=="p0":
+    if snakemake.wildcards.res_share[0]=="x":
+        factor = float(snakemake.wildcards.res_share[1:].replace("m","-").replace("p","."))
+        res_share *= factor
+    elif  snakemake.wildcards.res_share=="p0":
         res_share = timescope(zone, year, snakemake)["country_res_target"]
     logger.info(f"RES share: {res_share}")
 
