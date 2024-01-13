@@ -314,6 +314,7 @@ def add_battery_constraints(n):
 def country_res_constraints(n, snakemake):
 
     ci_name = snakemake.config['ci']["name"]
+    policy = snakemake.wildcards.policy
     zone = snakemake.wildcards.zone
     year = snakemake.wildcards.year
     country_targets = snakemake.config[f"res_target_{year}"]
@@ -321,23 +322,22 @@ def country_res_constraints(n, snakemake):
     weights = n.snapshot_weightings["generators"]
     grid_res_techs = snakemake.config['global']['grid_res_techs']
 
-    for ct in country_targets.keys():
-        
+    for ct, target in country_targets.items():
 
+        # Override target for focus zone if not "p0"
+        if  (snakemake.wildcards.res_share!="p0") and (ct == zone):
+            target = float(snakemake.wildcards.res_share.replace("m","-").replace("p","."))
+
+        # Select grid buses
         grid_buses = n.buses.index[(n.buses.index.str[:2]==ct)]
-        ci_grid_buses = n.buses.index[(n.buses.index.str[:(len(ci_name)+3)]==f"{ci_name} {ct}")]
-        all_grid_buses = n.buses.index[(n.buses.index.str[:2]==ct) | (n.buses.index.str[:(len(ci_name)+3)]==f"{ci_name} {ct}")]
-        
         if grid_buses.empty: continue
-
-        grid_loads = n.loads.index[n.loads.bus.isin(grid_buses)]
-        ci_grid_loads = n.loads.index[n.loads.bus.isin(ci_grid_buses)]
         
-        country_res_gens = n.generators.index[n.generators.bus.isin(all_grid_buses)
+        # Sum up renewables connected to grid buses
+        country_res_gens = n.generators.index[n.generators.bus.isin(grid_buses)
                                               & n.generators.carrier.isin(grid_res_techs)]
-        country_res_links = n.links.index[n.links.bus1.isin(all_grid_buses)
+        country_res_links = n.links.index[n.links.bus1.isin(grid_buses)
                                           & n.links.carrier.isin(grid_res_techs)]
-        country_res_storage_units = n.storage_units.index[n.storage_units.bus.isin(all_grid_buses)
+        country_res_storage_units = n.storage_units.index[n.storage_units.bus.isin(grid_buses)
                                                           & n.storage_units.carrier.isin(grid_res_techs)]
 
         eff_links = n.links.loc[country_res_links, "efficiency"]
@@ -348,29 +348,27 @@ def country_res_constraints(n, snakemake):
 
         lhs = gens.sum() + sus.sum() + links.sum()
 
-        target = timescope(ct, year, snakemake)["country_res_target"]
-
-        if  (snakemake.wildcards.res_share!="p0") and (ct == zone):
-            target = float(snakemake.wildcards.res_share.replace("m","-").replace("p","."))
-
-
+        # Select electricity load
+        grid_loads = n.loads.index[n.loads.bus.isin(grid_buses)]
         el_load = (n.loads_t.p_set[grid_loads].sum(axis=1)*weights).sum() # number
         
-        if ci_grid_loads.empty:
-            total_load = el_load
-        else:
-            h2_load = n.loads.p_set[ci_grid_loads].sum()*8760
-            h2_efficiency = n.links[n.links.carrier=="H2 Electrolysis"].efficiency.mean()
-            total_load = el_load + h2_load / h2_efficiency
+        # Add H2 load for "grd" policy
+        if policy == "grd":
+            ci_grid_buses = n.buses.index[(n.buses.index.str[:(len(ci_name)+3)]==f"{ci_name} {ct}")]
+            ci_grid_loads = n.loads.index[n.loads.bus.isin(ci_grid_buses)]
+            if not ci_grid_loads.empty:
+                h2_load = n.loads.p_set[ci_grid_loads].sum()*8760
+                h2_efficiency = n.links[n.links.carrier=="H2 Electrolysis"].efficiency.mean()
+                el_load += h2_load / h2_efficiency
 
-        logger.info(f"country RES constraints for {ct} {target} and total load {round(total_load/1e6)} TWh")
+        logger.info(f"country RES constraints for {ct} {target} and total load {round(el_load/1e6)} TWh")
 
-        n.model.add_constraints(lhs >= target*total_load, name=f"GlobalConstraint-country_res_constraints_{ct}")
+        n.model.add_constraints(lhs >= target*el_load, name=f"GlobalConstraint-country_res_constraints_{ct}")
 
         n.add(
             "GlobalConstraint",
             f"country_res_constraints_{ct}",
-            constant=target*total_load,
+            constant=target*el_load,
             sense=">=",
             type="",
         )
