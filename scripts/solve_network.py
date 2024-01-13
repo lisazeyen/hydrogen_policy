@@ -53,12 +53,12 @@ def geoscope(n, zone, area):
     def get_neighbours(zone):
         buses = {}
         for c in ["Line", "Link"]:
-            items = ((n.df(c).bus0.str.contains(zone) | n.df(c).bus1.str.contains(zone))
-                     & n.df(c).carrier.isin(["", "DC"]))
+            items = ((n.df(c).bus0.str.contains('DE') | n.df(c).bus1.str.contains('DE'))
+                        & (n.df(c).carrier.isin(["", "DC"]) | n.df(c).carrier.isin(["", "AC"])))
             buses[c] = n.df(c).loc[items, ["bus0", "bus1"]].values
         neighbors = pd.Index(np.concatenate((buses["Line"],
-                                             buses["Link"])).ravel("K"))
-        basenodes = n.buses[(n.buses.index.str[:2].isin(neighbors.str[:2]))
+                                                buses["Link"])).ravel("K"))
+        basenodes = n.buses[(n.buses.index.str[:3].isin(neighbors.str[:3]))
                             &(n.buses.carrier=="AC")].index
         return basenodes
 
