@@ -247,12 +247,13 @@ def res_constraints_node(n, snakemake, node):
 
     n.model.add_constraints(lhs >= 0, name=f"{node.split(' ')[1]}_RES_annual_matching")
 
+    # Optionally limit excess
+    if "p" in policy:
+        allowed_excess = float(policy.replace("res","").replace("p","."))
 
-    allowed_excess = float(policy.replace("res","").replace("p","."))
+        lhs = res - (electrolysis*allowed_excess)
 
-    lhs = res - (electrolysis*allowed_excess)
-
-    n.model.add_constraints(lhs <= 0, name=f"{node.split(' ')[1]}_RES_annual_matching_excess")
+        n.model.add_constraints(lhs <= 0, name=f"{node.split(' ')[1]}_RES_annual_matching_excess")
 
 
 def monthly_constraints(n, snakemake):
@@ -313,16 +314,16 @@ def excess_constraints_node(n, snakemake, node):
 
     electrolysis = (n.model['Link-p'].loc[:,[f"{name} H2 Electrolysis"]] * weights).sum("Link")
 
-
     # there is no import so I think we don't need this constraint
     # con = define_constraints(n, lhs, '>=', 0., 'RESconstraints','REStarget')
 
-    allowed_excess = float(policy.replace("exl","").replace("p","."))
+    # Optionally limit excess
+    if "p" in policy:
+        allowed_excess = float(policy.replace("exl","").replace("p","."))
 
+        lhs = res - electrolysis*allowed_excess
 
-    lhs = res - electrolysis*allowed_excess
-
-    n.model.add_constraints(lhs <= 0, name=f"{node.split(' ')[0]}_hourly_excess")
+        n.model.add_constraints(lhs <= 0, name=f"{node.split(' ')[0]}_hourly_excess")
 
 
 def solve(policy, n):
