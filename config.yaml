@@ -42,7 +42,7 @@ solving_option: "together"   # options ["twostep", "together"]
 # local electrolysis production
 ci:
   name: "CI"
-  res_techs: ["onwind","solar"]
+  res_techs: ["solar","onwind","offwind-ac","offwind-dc"]
 
 # regional coverage of the model: "regions" or "EU"
 # "test" -> one country only (?)
