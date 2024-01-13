@@ -139,7 +139,7 @@ def add_H2_node(n, snakemake, node, target):
         return None
 
     #RES generator
-    for carrier in ["onwind","solar"]:
+    for carrier in snakemake.config['ci']['res_techs']:
         gen_template = node+" "+carrier+"-{}".format(year)
         n.add("Generator",
             f"{name} {carrier}",
@@ -207,7 +207,7 @@ def res_max_capacity(n, snakemake, ci_node):
     year = snakemake.wildcards.year
 
     # Capacity limit
-    for carrier in ["onwind","solar"]:
+    for carrier in snakemake.config['ci']['res_techs']:
         
         c = ci_node.split(" ")[1]
         c_tech = f'{c} 0 {carrier}-{year}'
@@ -266,7 +266,6 @@ def monthly_constraints(n, snakemake):
 
 def monthly_constraints_node(n, snakemake, node):
     
-
     ci = snakemake.config['ci']
     ci_name = ci['name']    
     name = f"{ci_name} {node.split(' ')[1]}"
