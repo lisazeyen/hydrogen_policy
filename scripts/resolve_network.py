@@ -216,7 +216,7 @@ def res_max_capacity(n, snakemake, ci_node):
         c_tech = f'{c} 0 {carrier}-{year}'
         ci_tech = f'{ci_node} {carrier}'
 
-        if ci_tech in n.generators:
+        if ci_tech in n.generators.index:
             lhs = n.model['Generator-p_nom'][c_tech] + n.model['Generator-p_nom'][ci_tech]    
             max_capa = n.generators.loc[c_tech, 'p_nom_max']
             n.model.add_constraints(lhs <= max_capa, name=f'{c}_{carrier}_max_capacity')
@@ -293,16 +293,18 @@ def monthly_constraints_node(n, snakemake, node):
 
 def excess_constraints(n, snakemake):
 
+    # Excess countraints (optional) and max RES capacity for hourly matching
+
     area = snakemake.config['area']
     year = snakemake.wildcards.year
     policy = snakemake.wildcards.policy
     country_targets = snakemake.config[f"h2_target_{year}"]
     
-    # Optionally limit excess
-    if "p" in policy:
-        for country in country_targets.keys():
-            node = geoscope(n, country, area)['node']
+    for country in country_targets.keys():
+        node = geoscope(n, country, area)['node']
+        if "p" in policy:
             excess_constraints_node(n, snakemake, node)
+        res_max_capacity(n, snakemake, node)
 
 
 def excess_constraints_node(n, snakemake, node):
@@ -329,6 +331,8 @@ def excess_constraints_node(n, snakemake, node):
     lhs = res - electrolysis*allowed_excess
 
     n.model.add_constraints(lhs <= 0, name=f"{node.split(' ')[0]}_hourly_excess")
+
+    
 
 
 def solve(policy, n):
