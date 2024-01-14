@@ -295,13 +295,14 @@ def excess_constraints(n, snakemake):
 
     area = snakemake.config['area']
     year = snakemake.wildcards.year
+    policy = snakemake.wildcards.policy
     country_targets = snakemake.config[f"h2_target_{year}"]
     
-    for country in country_targets.keys():
-        
-        node = geoscope(n, country, area)['node']
-    
-        excess_constraints_node(n, snakemake, node)
+    # Optionally limit excess
+    if "p" in policy:
+        for country in country_targets.keys():
+            node = geoscope(n, country, area)['node']
+            excess_constraints_node(n, snakemake, node)
 
 
 def excess_constraints_node(n, snakemake, node):
@@ -312,6 +313,8 @@ def excess_constraints_node(n, snakemake, node):
     policy = snakemake.wildcards.policy
 
     res_gens = [name + " " + g for g in ci['res_techs']]
+    res_gens = [name for name in res_gens if name in n.generators.index]
+    
     weights = n.snapshot_weightings["generators"]
 
     res = (n.model['Generator-p'].loc[:,res_gens] * weights).sum("Generator")
@@ -321,13 +324,11 @@ def excess_constraints_node(n, snakemake, node):
     # there is no import so I think we don't need this constraint
     # con = define_constraints(n, lhs, '>=', 0., 'RESconstraints','REStarget')
 
-    # Optionally limit excess
-    if "p" in policy:
-        allowed_excess = float(policy.replace("exl","").replace("p","."))
+    allowed_excess = float(policy.replace("exl","").replace("p","."))
 
-        lhs = res - electrolysis*allowed_excess
+    lhs = res - electrolysis*allowed_excess
 
-        n.model.add_constraints(lhs <= 0, name=f"{node.split(' ')[0]}_hourly_excess")
+    n.model.add_constraints(lhs <= 0, name=f"{node.split(' ')[0]}_hourly_excess")
 
 
 def solve(policy, n):
