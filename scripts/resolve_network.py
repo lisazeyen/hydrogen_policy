@@ -141,15 +141,18 @@ def add_H2_node(n, snakemake, node, target):
     #RES generator
     for carrier in snakemake.config['ci']['res_techs']:
         gen_template = node+" "+carrier+"-{}".format(year)
-        n.add("Generator",
-            f"{name} {carrier}",
-            carrier=carrier,
-            bus=name,
-            p_nom_extendable=True,
-            p_max_pu=n.generators_t.p_max_pu[gen_template],
-            capital_cost=n.generators.at[gen_template,"capital_cost"],
-            marginal_cost=n.generators.at[gen_template,"marginal_cost"]
-        )
+        try:
+            n.add("Generator",
+                f"{name} {carrier}",
+                carrier=carrier,
+                bus=name,
+                p_nom_extendable=True,
+                p_max_pu=n.generators_t.p_max_pu[gen_template],
+                capital_cost=n.generators.at[gen_template,"capital_cost"],
+                marginal_cost=n.generators.at[gen_template,"marginal_cost"]
+            )
+        except KeyError:
+            logger.info(f'carrier {gen_template} was not found in base node and hence not added to CI node')
 
     if "battery" in ["battery"]:
         n.add("Bus",
@@ -212,11 +215,11 @@ def res_max_capacity(n, snakemake, ci_node):
         c = ci_node.split(" ")[1]
         c_tech = f'{c} 0 {carrier}-{year}'
         ci_tech = f'{ci_node} {carrier}'
-        lhs = n.model['Generator-p_nom'][c_tech] + n.model['Generator-p_nom'][ci_tech]
-        
-        max_capa = n.generators.loc[c_tech, 'p_nom_max']
 
-        n.model.add_constraints(lhs <= max_capa, name=f'{c}_{carrier}_max_capacity')
+        if ci_tech in n.generators:
+            lhs = n.model['Generator-p_nom'][c_tech] + n.model['Generator-p_nom'][ci_tech]    
+            max_capa = n.generators.loc[c_tech, 'p_nom_max']
+            n.model.add_constraints(lhs <= max_capa, name=f'{c}_{carrier}_max_capacity')
 
 
 def res_constraints(n, snakemake):
@@ -238,7 +241,8 @@ def res_constraints_node(n, snakemake, node):
     weights = n.snapshot_weightings["generators"]
 
     res_gens = [name + " " + g for g in ci['res_techs']]
-
+    res_gens = [name for name in res_gens if name in n.generators.index]
+    
     res = (n.model['Generator-p'].loc[:,res_gens] * weights).sum()
 
     electrolysis = (n.model['Link-p'].loc[:,[f"{name} H2 Electrolysis"]] * weights).sum()
