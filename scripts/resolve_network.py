@@ -294,14 +294,10 @@ def monthly_constraints_node(n, snakemake, node):
 def excess_constraints(n, snakemake):
 
     # Excess countraints (optional) and max RES capacity for hourly matching
-
-    area = snakemake.config['area']
-    year = snakemake.wildcards.year
     policy = snakemake.wildcards.policy
-    country_targets = snakemake.config[f"h2_target_{year}"]
-    
-    for country in country_targets.keys():
-        node = geoscope(n, country, area)['node']
+    ci_nodes = n.buses[(n.buses.index.str[:2]=='CI') & (n.buses.carrier == 'AC')].index     
+
+    for node in ci_nodes:
         if "p" in policy:
             excess_constraints_node(n, snakemake, node)
         res_max_capacity(n, snakemake, node)
