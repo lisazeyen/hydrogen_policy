@@ -307,7 +307,7 @@ def excess_constraints_node(n, snakemake, node):
 
     ci = snakemake.config['ci']
     ci_name = ci['name']
-    name = f"{ci_name} {node.split(' ')[0]}"
+    name = f"{ci_name} {node.split(' ')[1]}"
     policy = snakemake.wildcards.policy
 
     res_gens = [name + " " + g for g in ci['res_techs']]
@@ -326,7 +326,7 @@ def excess_constraints_node(n, snakemake, node):
 
     lhs = res - electrolysis*allowed_excess
 
-    n.model.add_constraints(lhs <= 0, name=f"{node.split(' ')[0]}_hourly_excess")
+    n.model.add_constraints(lhs <= 0, name=f"{node.split(' ')[1]}_hourly_excess")
 
     
 

@@ -46,8 +46,8 @@ def solve_network(n, tech_palette):
 
 
     if snakemake.config["global"]["must_run"]:
-        coal_i = n.links[n.links.carrier.isin(["lignite","coal"])].index
-        n.links.loc[coal_i, "p_min_pu"] = 0.9
+        must_run_i = n.links[n.links.carrier.isin(["lignite","coal","OCGT","CCGT","nuclear","urban central solid biomass CHP"])].index
+        n.links.loc[must_run_i, "p_min_pu"] = 0.2
     n.consistency_check()
 
 

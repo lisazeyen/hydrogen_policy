@@ -12,27 +12,30 @@ n_2030: 'input/elec_s_37_lv1.0__1H-B-solar+p3_2030.nc'
 ###################
 # Scenario controls
 
-run: '2023-11-25'
+run: 'must_run'  # '2024-01-13'
 
 #wildcards
 scenario:
-  policy: ["ref" , "grd", "res1p2", "exl1p2"]  
-  # all options: "ref", "grd", "res1p0","res1p2","res1p3", "exl1p0","exl1p2","exl1p3", "offgrid", "monthly"
+  policy: ["ref"]  # "ref", "grd", "res", "exl"
+  # all options: "ref", "grd", "res1p0", "res1p2", "res1p3", "exl1p0","exl1p2", "exl1p3", "offgrid", "monthly"
   # ref: no H2 demand
-  # grd: H2 demand met from grid with no local procurement
-  # res: H2 elec demand matched by procured wind and solar annually
-  # exl: like cfe100 but excess limited to 20%
+  # grd: H2 demand met from grid without dedicated renewables
+  # res: H2 elec demand matched by dedicated renewables annually
+  # exl: H2 elec demand matched by dedicated renewables hourly
   palette: [ "p1", # onwind + solar + battery
             ]
   zone: ["DE"]
   year: ['2030'] # controls both the brownfield fleet and tech costs projection
   # all options: ['2025', '2030']
-  res_share: [p0] #p0 is base assumption, others give the share, e.g. p10 would be 10% RES share
+  res_share: [p0] 
+  # p0 applies the below-defined national targets
+  # p in combination with other numbers applies the given share to the focus zone, e.g., p10 would be 10% RES share
+  # x in combination with a factor scales the below-defined national targets, e.g., x1p2 scales by factor 1.2
   offtake_volume: [4000]  # full load hours to get from GW_el targets to MWh_H2 offtake per hour
-  storage: ["mtank"] # ["flexibledemand", "underground", "mtank", "htank", "nostore"]  # storage type at hydrogen production
+  storage: ["htank"] # ["flexibledemand", "underground", "mtank", "htank", "nostore"]  # storage type at hydrogen production
   h2_background: 
     pipelines: False
-    storage: "mtank"
+    storage: "htank"
   h2_demand_added: False
   temporal_resolution: "1H"
   DE_target: True
@@ -73,10 +76,12 @@ additional_nodes: ["EU oil","EU gas", "EU lignite", "EU coal", "EU uranium", "EU
 
 
 global:
-  must_run: False  # must run condition for coal power plants
+  must_run: True  # must run condition for coal power plants
   uc: False  # unit commitment for conventional plants
-  policy_type: "co2 cap" # one of ["co2 cap", "co2 price"]
-  co2_baseline: 126913232  # MtCO2/a - based on previous results with co2 price
+  policy_type: "co2 price" # one of ["co2 cap", "co2 price"]
+  co2_baseline: 127689215  # MtCO2/a - based on previous results with co2 price
+  # mtank: 126857780
+  # htank: 127689215
   co2_share: 1.0  #pu  - rough target for 2030
   limit_res_exp_2025: 2 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology
   limit_res_exp_2030: 4 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology
