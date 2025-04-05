@@ -12,11 +12,11 @@ n_2030: 'input/elec_s_37_lv1.0__1H-B-solar+p3_2030.nc'
 ###################
 # Scenario controls
 
-run: 'must_run'  # '2024-01-13'
+run: '2025-03-30'  # 'co2_price'
 
 #wildcards
 scenario:
-  policy: ["ref"]  # "ref", "grd", "res", "exl"
+  policy: ["ref", "grd", "res", "exl"]  # "ref", "grd", "res", "exl"
   # all options: "ref", "grd", "res1p0", "res1p2", "res1p3", "exl1p0","exl1p2", "exl1p3", "offgrid", "monthly"
   # ref: no H2 demand
   # grd: H2 demand met from grid without dedicated renewables
@@ -27,7 +27,7 @@ scenario:
   zone: ["DE"]
   year: ['2030'] # controls both the brownfield fleet and tech costs projection
   # all options: ['2025', '2030']
-  res_share: [p0] 
+  res_share: ["p0"] 
   # p0 applies the below-defined national targets
   # p in combination with other numbers applies the given share to the focus zone, e.g., p10 would be 10% RES share
   # x in combination with a factor scales the below-defined national targets, e.g., x1p2 scales by factor 1.2
@@ -38,7 +38,8 @@ scenario:
     storage: "htank"
   h2_demand_added: False
   temporal_resolution: "1H"
-  DE_target: True
+  DE_targets_coal: True
+  DE_targets_res: False
 
 
 solving_option: "together"   # options ["twostep", "together"]
@@ -72,25 +73,26 @@ carrier_to_keep: [ #generators
                   #Loads ('industry electricity' is included)
                   "electricity"
                     ]
-additional_nodes: ["EU oil","EU gas", "EU lignite", "EU coal", "EU uranium", "EU solid biomass", "co2 atmosphere","co2 stored"]
+additional_nodes: ["EU oil", "EU gas", "EU lignite", "EU coal", "EU uranium", "EU solid biomass", "co2 atmosphere", "co2 stored"]
 
 
 global:
-  must_run: True  # must run condition for coal power plants
+  must_run: False  # must run condition for coal power plants
   uc: False  # unit commitment for conventional plants
-  policy_type: "co2 price" # one of ["co2 cap", "co2 price"]
-  co2_baseline: 127689215  # MtCO2/a - based on previous results with co2 price
-  # mtank: 126857780
-  # htank: 127689215
+  policy_type: "co2 cap" # one of ["co2 cap", "co2 price"]
+  co2_baseline: 163261411  # MtCO2/a - based on previous results with co2 price
+  # mtank: 162976008
+  # htank: 163261411 
+  # htank hprice: 226406550
   co2_share: 1.0  #pu  - rough target for 2030
   limit_res_exp_2025: 2 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology
   limit_res_exp_2030: 4 # max ratio (to 2021 basis) of renewable tech expantion per zone and technology
   co2_price_2025: 80 # EUR/tCO2
-  co2_price_2030: 130 # EUR/tCO2
+  co2_price_2030: 130 # 113.4 # EUR/tCO2
   grid_res_techs: ["offwind","offwind-ac","offwind-dc","onwind", "ror", "solar",
                     "hydro","urban central solid biomass CHP"] #"solar rooftop"
   grid_clean_techs: ["offwind","offwind-ac","offwind-dc","onwind", "ror", "solar",
-  "hydro", "nuclear", "urban central solid biomass CHP"] #"solar rooftop"
+                    "hydro", "nuclear", "urban central solid biomass CHP"] #"solar rooftop"
   emitters: ["CCGT", "OCGT", "coal", "lignite", "oil"]
   # fix_capacities_electrolysis: True
   H2_store_cost:
@@ -121,13 +123,17 @@ costs:
   adv_geo_overnight_2030: 10000  # 2022$/kW CAPEX
   allam_ccs_overnight_2025: 2760 # 2022$/kW CAPEX, 2300*1.2
   allam_ccs_overnight_2030: 3000 # 2022$/kW CAPEX, 2500*1.2
-  price_lignite: 6.5 # EUR/MWhth from TYNDP2020 -> default is 2.9
-  price_coal: 8.9 # EUR/MWhth from TYNDP2020 -> default is 8.15
-  price_gas: 35 # EUR/MWhth -> https://energy.ec.europa.eu/system/files/2022-05/SWD_2022_230_1_EN_autre_document_travail_service_part1_v3.pdf
+  price_lignite: 6.5 # EUR/MWhth from TYNDP2024
+  price_coal: 6.4 # EUR/MWhth from TYNDP2024
+  price_gas: 22.6 # EUR/MWhth from TYNDP2024
   # price_gas_2025: 50.0 # https://www.powernext.com/futures-market-data
   # price_oil = 50.0 # EUR/MWhth -> TYNDP2020 = default
   # price_uranium = 1.7 EUR/MWhth -> TYNDP2020  is 2.6
   # TYNDP2020: https://2022.entsos-tyndp-scenarios.eu/download/
+  cost_res:
+    solar: 1.0  # 1.1
+    onwind: 1.0  # 1.3
+    offwind: 1.0  # 1.5
 
 #national policies
 phase_out:
