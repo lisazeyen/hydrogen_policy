@@ -41,13 +41,13 @@ def solve_network(n, tech_palette):
             logger.info("setting excess limit on hourly matching")
             excess_constraints(n, snakemake)
             
-        if snakemake.config["scenario"]["DE_target"] and "DE" in n.buses.country.unique():
+        if snakemake.config["scenario"]["DE_targets_res"] and "DE" in n.buses.country.unique():
             DE_targets_res(n, snakemake)
 
 
     if snakemake.config["global"]["must_run"]:
         must_run_i = n.links[n.links.carrier.isin(["lignite","coal","OCGT","CCGT","nuclear","urban central solid biomass CHP"])].index
-        n.links.loc[must_run_i, "p_min_pu"] = 0.2
+        n.links.loc[must_run_i, "p_min_pu"] = 0.1
     n.consistency_check()
 
 
@@ -100,7 +100,7 @@ capacities_2030 = {
      "offwind": 30e3 ,  # p.22 [1]
      }
 
-def DE_targets(n, snakemake):
+def DE_targets_coal(n, snakemake):
     
     """ Set capacities according to planned targets.
     from Agora report [1]  p.10
@@ -126,7 +126,7 @@ def DE_targets(n, snakemake):
     return n
 
 
-def DE_targets_res(n, snakemake, include_ci=True):
+def DE_targets_res(n, snakemake, include_ci=False):
     """Add constraint for renewable capacities in Germany."""
     
     year = snakemake.wildcards.year   
@@ -261,12 +261,13 @@ if __name__ == "__main__":
     area = snakemake.config['area']
     logger.info(f"Geoscope: {area}")
 
-    res_share = float(snakemake.wildcards.res_share.replace("m","-").replace("p","."))
     if snakemake.wildcards.res_share[0]=="x":
         factor = float(snakemake.wildcards.res_share[1:].replace("m","-").replace("p","."))
-        res_share *= factor
+        res_share = factor * timescope(zone, year, snakemake)["country_res_target"]
     elif  snakemake.wildcards.res_share=="p0":
         res_share = timescope(zone, year, snakemake)["country_res_target"]
+    else:
+        res_share = float(snakemake.wildcards.res_share.replace("m","-").replace("p","."))
     logger.info(f"RES share: {res_share}")
 
     offtake_volume = float(snakemake.wildcards.offtake_volume)
@@ -315,8 +316,8 @@ if __name__ == "__main__":
     set_co2_policy(n, snakemake, costs)
     
     # add conventional power plant targets here and RES as constraint
-    if snakemake.config["scenario"]["DE_target"] and "DE" in n.buses.country.unique():
-        n = DE_targets(n, snakemake)
+    if snakemake.config["scenario"]["DE_targets_coal"] and "DE" in n.buses.country.unique():
+        n = DE_targets_coal(n, snakemake)
 
     add_H2(n, snakemake)
     add_dummies(n)

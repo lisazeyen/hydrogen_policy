@@ -103,6 +103,10 @@ def cost_parametrization(n, snakemake):
 
     for carrier in ['lignite', 'coal', 'gas']:
         n.generators.loc[n.generators.index.str.contains(f'EU {carrier}'), 'marginal_cost'] = snakemake.config['costs'][f'price_{carrier}']
+    
+    for res in ['solar', 'onwind', 'offwind']:
+        if res in snakemake.config['costs']['cost_res'].keys():
+            n.generators.loc[n.generators.index.str.contains(res), 'capital_cost'] *= snakemake.config['costs']['cost_res'][res]
 
     n.generators.loc[n.generators.carrier=="onwind", "marginal_cost"] = 0.015
 
@@ -376,6 +380,27 @@ def country_res_constraints(n, snakemake):
             type="",
         )
 
+def country_must_run(n, snakemake):
+
+    # WORK IN PROGRESS
+
+    weights = n.snapshot_weightings["generators"]
+    
+    nodes = n.buses[(n.buses.index.str[-1:]=='0')].index     
+    
+    for node in nodes:
+
+        must_run_i = n.links[
+            n.links.carrier.isin(["lignite","coal","OCGT","CCGT","nuclear","urban central solid biomass CHP"]) &
+            n.links.bus1 == node
+        ].index
+        
+        # Sum up renewables connected to grid buses
+        eff_links = n.links.loc[must_run_i, "efficiency"]
+
+        links = n.model['Link-p'].loc[:,must_run_i] * eff_links * weights
+        
+        lhs = links.sum(axis=1)
 
 def add_unit_committment(n):
     """
